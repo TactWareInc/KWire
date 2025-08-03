@@ -1,0 +1,52 @@
+# Gradle
+.gradle/
+build/
+gradle-app.setting
+!gradle-wrapper.jar
+!gradle-wrapper.properties
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# Eclipse
+.project
+.classpath
+.settings/
+bin/
+
+# VS Code
+.vscode/
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Kotlin
+*.kotlin_module
+
+# Local files
+local.properties
+
+# Generated files
+generated/
+**/generated/
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# Build outputs
+dist/
+lib/
+
