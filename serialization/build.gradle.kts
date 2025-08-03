@@ -1,6 +1,6 @@
 plugins {
-    kotlin("multiplatform")
-    kotlin("plugin.serialization")
+    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 kotlin {
@@ -18,18 +18,18 @@ kotlin {
             dependencies {
                 api(project(":core"))
                 api(project(":runtime"))
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:${rootProject.extra["serializationVersion"]}")
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-protobuf:${rootProject.extra["serializationVersion"]}")
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-cbor:${rootProject.extra["serializationVersion"]}")
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:${rootProject.extra["coroutinesVersion"]}")
-                implementation("org.jetrbrains.kotlinx:kotlinx-datetime:0.6.2")
+                implementation(libs.kotlinx.serialization.json)
+                implementation(libs.kotlinx.serialization.protobuf)
+                implementation(libs.kotlinx.serialization.cbor)
+                implementation(libs.kotlinx.coroutines.core)
+                implementation(libs.kotlinx.datetime)
             }
         }
         
         val commonTest by getting {
             dependencies {
-                implementation(kotlin("test"))
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:${rootProject.extra["coroutinesVersion"]}")
+                implementation(libs.kotlin.test)
+                implementation(libs.kotlinx.coroutines.test)
             }
         }
         
@@ -41,7 +41,7 @@ kotlin {
         
         val jvmTest by getting {
             dependencies {
-                implementation(kotlin("test-junit5"))
+                implementation(libs.kotlin.test.junit5)
             }
         }
     }

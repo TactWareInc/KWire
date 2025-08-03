@@ -1,21 +1,21 @@
 plugins {
-    kotlin("jvm")
-    kotlin("plugin.serialization")
+    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.serialization)
     id("java-gradle-plugin")
     id("maven-publish")
 }
 
 dependencies {
     implementation(gradleApi())
-    implementation(kotlin("stdlib"))
-    implementation(kotlin("gradle-plugin"))
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:${rootProject.extra["serializationVersion"]}")
+    implementation(libs.kotlin.stdlib)
+    implementation(libs.kotlin.gradle.plugin)
+    implementation(libs.kotlinx.serialization.json)
     
     // For code generation
-    implementation("com.squareup:kotlinpoet:1.18.1")
+    implementation(libs.kotlinpoet)
     
-    testImplementation(kotlin("test"))
-    testImplementation(kotlin("test-junit5"))
+    testImplementation(libs.kotlin.test)
+    testImplementation(libs.kotlin.test.junit5)
     testImplementation(gradleTestKit())
 }
 

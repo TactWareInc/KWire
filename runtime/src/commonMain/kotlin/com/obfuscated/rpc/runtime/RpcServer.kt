@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalTime::class)
+
 package com.obfuscated.rpc.runtime
 
 import com.obfuscated.rpc.core.*
@@ -11,6 +13,8 @@ import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.KSerializer
 import kotlin.reflect.KClass
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 
 /**
  * RPC server for handling remote procedure calls.
@@ -81,7 +85,7 @@ class RpcServer(
         } catch (e: Exception) {
             val errorResponse = RpcError(
                 messageId = message.messageId,
-                timestamp = getCurrentTimeMillis(),
+                timestamp = Clock.System.now().toEpochMilliseconds(),
                 errorCode = RpcErrorCodes.INTERNAL_ERROR,
                 errorMessage = e.message ?: "Unknown error"
             )
@@ -101,7 +105,7 @@ class RpcServer(
             
             val response = RpcResponse(
                 messageId = request.messageId,
-                timestamp = getCurrentTimeMillis(),
+                timestamp = Clock.System.now().toEpochMilliseconds(),
                 result = result?.let { json.encodeToJsonElement(it) },
                 streaming = false
             )
@@ -110,7 +114,7 @@ class RpcServer(
         } catch (e: Exception) {
             val errorResponse = RpcError(
                 messageId = request.messageId,
-                timestamp = getCurrentTimeMillis(),
+                timestamp = Clock.System.now().toEpochMilliseconds(),
                 errorCode = when (e) {
                     is RpcException -> e.errorCode
                     else -> RpcErrorCodes.INTERNAL_ERROR
@@ -139,7 +143,7 @@ class RpcServer(
                 resultFlow.collect { item ->
                     val streamData = StreamData(
                         messageId = generateMessageId(),
-                        timestamp = getCurrentTimeMillis(),
+                        timestamp = Clock.System.now().toEpochMilliseconds(),
                         streamId = streamStart.streamId,
                         data = json.encodeToJsonElement(item)
                     )
@@ -148,7 +152,7 @@ class RpcServer(
                 
                 val streamEnd = StreamEnd(
                     messageId = generateMessageId(),
-                    timestamp = getCurrentTimeMillis(),
+                    timestamp = Clock.System.now().toEpochMilliseconds(),
                     streamId = streamStart.streamId
                 )
                 transport.send(streamEnd)
@@ -156,7 +160,7 @@ class RpcServer(
             } catch (e: Exception) {
                 val streamError = StreamError(
                     messageId = generateMessageId(),
-                    timestamp = getCurrentTimeMillis(),
+                    timestamp = Clock.System.now().toEpochMilliseconds(),
                     streamId = streamStart.streamId,
                     errorCode = when (e) {
                         is RpcException -> e.errorCode
@@ -174,7 +178,7 @@ class RpcServer(
     }
     
     private fun generateMessageId(): String {
-        return "msg_${getCurrentTimeMillis()}_${(0..999).random()}"
+        return "msg_${Clock.System.now().toEpochMilliseconds()}_${(0..999).random()}"
     }
     
     /**

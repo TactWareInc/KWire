@@ -11,7 +11,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "kotlin-obfuscated-rpc"
+rootProject.name = "KWire"
 
 include(
     ":core",

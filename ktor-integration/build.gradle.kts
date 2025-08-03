@@ -1,6 +1,6 @@
 plugins {
-    kotlin("multiplatform")
-    kotlin("plugin.serialization")
+    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 kotlin {
@@ -22,41 +22,41 @@ kotlin {
                 api(project(":obfuscation-support"))
                 
                 // Ktor dependencies
-                implementation("io.ktor:ktor-server-core:${rootProject.extra["ktorVersion"]}")
-                implementation("io.ktor:ktor-client-core:${rootProject.extra["ktorVersion"]}")
-                implementation("io.ktor:ktor-client-content-negotiation:${rootProject.extra["ktorVersion"]}")
-                implementation("io.ktor:ktor-serialization-kotlinx-json:${rootProject.extra["ktorVersion"]}")
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:${rootProject.extra["serializationVersion"]}")
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:${rootProject.extra["coroutinesVersion"]}")
+                implementation(libs.ktor.server.core)
+                implementation(libs.ktor.client.core)
+                implementation(libs.ktor.client.content.negotiation)
+                implementation(libs.ktor.serialization.kotlinx.json)
+                implementation(libs.kotlinx.serialization.json)
+                implementation(libs.kotlinx.coroutines.core)
             }
         }
         
         val commonTest by getting {
             dependencies {
-                implementation(kotlin("test"))
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:${rootProject.extra["coroutinesVersion"]}")
-                implementation("io.ktor:ktor-server-test-host:${rootProject.extra["ktorVersion"]}")
-                implementation("io.ktor:ktor-client-mock:${rootProject.extra["ktorVersion"]}")
+                implementation(libs.kotlin.test)
+                implementation(libs.kotlinx.coroutines.test)
+                implementation(libs.ktor.server.test.host)
+                implementation(libs.ktor.client.mock)
             }
         }
         
         val jvmMain by getting {
             dependencies {
-                implementation("io.ktor:ktor-server-netty:${rootProject.extra["ktorVersion"]}")
-                implementation("io.ktor:ktor-client-cio:${rootProject.extra["ktorVersion"]}")
+                implementation(libs.ktor.server.netty)
+                implementation(libs.ktor.client.cio)
             }
         }
         
         val jvmTest by getting {
             dependencies {
-                implementation(kotlin("test-junit5"))
-                implementation("io.ktor:ktor-server-test-host:${rootProject.extra["ktorVersion"]}")
+                implementation(libs.kotlin.test.junit5)
+                implementation(libs.ktor.server.test.host)
             }
         }
         
         val jsMain by getting {
             dependencies {
-                implementation("io.ktor:ktor-client-js:${rootProject.extra["ktorVersion"]}")
+                implementation(libs.ktor.client.js)
             }
         }
     }

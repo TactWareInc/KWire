@@ -1,6 +1,6 @@
 plugins {
-    kotlin("jvm")
-    kotlin("plugin.serialization")
+    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.serialization)
     application
 }
 
@@ -15,16 +15,16 @@ dependencies {
     implementation(project(":obfuscation-support"))
     implementation(project(":ktor-integration"))
     
-    implementation("io.ktor:ktor-client-core:3.1.0")
-    implementation("io.ktor:ktor-client-cio:3.1.0")
-    implementation("io.ktor:ktor-client-content-negotiation:3.1.0")
-    implementation("io.ktor:ktor-serialization-kotlinx-json:3.1.0")
-    implementation("io.ktor:ktor-client-websockets:3.1.0")
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.cio)
+    implementation(libs.ktor.client.content.negotiation)
+    implementation(libs.ktor.serialization.kotlinx.json)
+    implementation(libs.ktor.client.websockets)
     
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+    implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.kotlinx.serialization.json)
     
-    implementation("ch.qos.logback:logback-classic:1.4.14")
+    implementation(libs.logback.classic)
 }
 
 kotlin {

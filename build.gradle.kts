@@ -1,6 +1,7 @@
 plugins {
-    kotlin("multiplatform") version "2.2.0" apply false
-    kotlin("plugin.serialization") version "2.2.0" apply false
+    alias(libs.plugins.kotlin.multiplatform) apply false
+    alias(libs.plugins.kotlin.serialization) apply false
+    alias(libs.plugins.kotlin.jvm) apply false
 }
 
 allprojects {
@@ -27,9 +28,5 @@ subprojects {
     }
 }
 
-// Common dependency versions
-extra["kotlinVersion"] = "2.2.0"
-extra["ktorVersion"] = "3.1.0"
-extra["serializationVersion"] = "1.6.3"
-extra["coroutinesVersion"] = "1.8.0"
+// All dependencies are now managed through the version catalog in gradle/libs.versions.toml
 
