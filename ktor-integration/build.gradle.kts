@@ -17,8 +17,6 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 api(project(":core"))
-                api(project(":runtime"))
-                api(project(":serialization"))
 
                 // Ktor dependencies
                 implementation(libs.ktor.server.core)

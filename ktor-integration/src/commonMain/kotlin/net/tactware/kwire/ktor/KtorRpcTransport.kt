@@ -7,7 +7,6 @@ import net.tactware.kwire.security.ObfuscationManager
 import net.tactware.kwire.security.SecurityManager
 import net.tactware.kwire.security.AuthCredentials
 import net.tactware.kwire.security.AuthResult
-import net.tactware.kwire.serialization.RpcSerializer
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -45,8 +44,7 @@ class KtorRpcTransport(
     
     private val obfuscationManager = config.obfuscationManager
     private val securityManager = config.securityManager
-    private val serializer = config.serializer
-    
+
     // Connection state
     private var _isConnected = false
     override val isConnected: Boolean get() = _isConnected
@@ -238,7 +236,6 @@ data class KtorRpcConfig(
     val enableObfuscation: Boolean = true,
     val obfuscationManager: ObfuscationManager? = null,
     val securityManager: SecurityManager? = null,
-    val serializer: RpcSerializer = RpcSerializer()
 )
 
 /**

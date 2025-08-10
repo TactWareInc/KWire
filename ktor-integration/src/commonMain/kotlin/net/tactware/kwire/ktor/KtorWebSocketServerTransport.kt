@@ -1,6 +1,6 @@
 package net.tactware.kwire.ktor
 
-import com.obfuscated.rpc.core.*
+import net.tactware.kwire.core.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
@@ -16,7 +16,6 @@ import net.tactware.kwire.core.messages.RpcRequest
 import net.tactware.kwire.core.messages.StreamStart
 import org.slf4j.LoggerFactory
 import kotlin.time.Duration.Companion.seconds
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Production-ready Ktor WebSocket server transport implementation.
@@ -39,7 +38,7 @@ class KtorWebSocketServerTransport(
     override val isConnected: Boolean get() = _isConnected
     
     // Connection management
-    private val activeConnections = ConcurrentHashMap<String, WebSocketSession>()
+    private val activeConnections = hashMapOf<String, WebSocketSession>()
     private val messageChannel = Channel<RpcMessage>(Channel.UNLIMITED)
     
     // Message handlers

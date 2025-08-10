@@ -17,7 +17,6 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 api(project(":core"))
-                api(project(":runtime"))
                 implementation(libs.kotlinx.serialization.json)
                 implementation(libs.kotlinx.serialization.protobuf)
                 implementation(libs.kotlinx.serialization.cbor)

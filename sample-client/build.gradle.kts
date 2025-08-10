@@ -10,8 +10,6 @@ application {
 
 dependencies {
     implementation(project(":core"))
-    implementation(project(":runtime"))
-    implementation(project(":serialization"))
     implementation(project(":obfuscation-support"))
     implementation(project(":ktor-integration"))
     implementation(project(":sample-api")) // Add dependency on sample-api for generated code

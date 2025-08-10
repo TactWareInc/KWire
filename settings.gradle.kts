@@ -17,8 +17,6 @@ dependencyResolutionManagement {
 rootProject.name = "kwire"
 
 include(":core")
-include(":runtime")
-include(":serialization")
 include(":obfuscation-support")
 include(":ktor-integration")
 include(":gradle-plugin")

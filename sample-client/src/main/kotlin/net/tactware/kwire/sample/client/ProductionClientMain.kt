@@ -35,7 +35,7 @@ fun main(args: Array<String>) {
 
         // Create real Ktor WebSocket client transport
         logger.info("🔧 Configuring Ktor WebSocket Client Transport...")
-        val transport = ktorWebSocketClientTransport {
+        val transport = ktorWebSocketClientTransport(CoroutineScope(Dispatchers.IO)) {
             serverUrl("ws://localhost:8082/rpc")  // Connect to production server
             pingInterval(15)                      // Ping every 15 seconds
             requestTimeout(30_000)               // 30 second timeout
