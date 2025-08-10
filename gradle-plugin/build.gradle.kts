@@ -1,34 +1,43 @@
 plugins {
-    alias(libs.plugins.kotlin.jvm)
-    alias(libs.plugins.kotlin.serialization)
+    kotlin("jvm") version "2.2.0"
+    kotlin("plugin.serialization") version "2.2.0"
     id("java-gradle-plugin")
     id("maven-publish")
 }
 
+repositories {
+    mavenCentral()
+    gradlePluginPortal()
+}
+
 dependencies {
     implementation(gradleApi())
-    implementation(libs.kotlin.stdlib)
-    implementation(libs.kotlin.gradle.plugin)
-    implementation(libs.kotlinx.serialization.json)
+    implementation("org.jetbrains.kotlin:kotlin-stdlib:2.2.0")
+    implementation("org.jetbrains.kotlin:kotlin-gradle-plugin:2.2.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
     
     // For code generation
-    implementation(libs.kotlinpoet)
+    implementation("com.squareup:kotlinpoet:1.18.1")
     
-    testImplementation(libs.kotlin.test)
-    testImplementation(libs.kotlin.test.junit5)
+    testImplementation("org.jetbrains.kotlin:kotlin-test:2.2.0")
+    testImplementation("org.jetbrains.kotlin:kotlin-test-junit5:2.2.0")
     testImplementation(gradleTestKit())
 }
 
 gradlePlugin {
     plugins {
         create("obfuscatedRpc") {
-            id = "com.obfuscated.rpc.plugin"
-            implementationClass = "com.obfuscated.rpc.gradle.ObfuscatedRpcPlugin"
-            displayName = "Obfuscated RPC Plugin"
-            description = "Gradle plugin for generating obfuscated RPC stubs and mappings"
+            id = "net.tactware.kwire.plugin"
+            implementationClass = "net.tactware.kwire.gradle.ObfuscatedRpcPlugin"
+            displayName = "KWire RPC Plugin"
+            description = "Gradle plugin for RPC routings"
         }
     }
 }
+
+// Enable local plugin usage
+group = "com.obfuscated.rpc"
+version = "1.0.0-SNAPSHOT"
 
 tasks.test {
     useJUnitPlatform()

@@ -1,4 +1,7 @@
 pluginManagement {
+    includeBuild("gradle-plugin") {
+        name = "kwire-gradle-plugin"
+    }
     repositories {
         gradlePluginPortal()
         mavenCentral()
@@ -11,16 +14,15 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "KWire"
+rootProject.name = "kwire"
 
-include(
-    ":core",
-    ":runtime", 
-    ":serialization",
-    ":ktor-integration",
-    ":obfuscation-support",
-    ":gradle-plugin",
-    ":sample-server",
-    ":sample-client"
-)
+include(":core")
+include(":runtime")
+include(":serialization")
+include(":obfuscation-support")
+include(":ktor-integration")
+include(":gradle-plugin")
+include(":sample-api")
+include(":sample-client")
+include(":sample-server")
 

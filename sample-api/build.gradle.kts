@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.serialization)
+    id("net.tactware.kwire.plugin")
     application
 }
 
@@ -14,7 +15,6 @@ dependencies {
     implementation(project(":serialization"))
     implementation(project(":obfuscation-support"))
     implementation(project(":ktor-integration"))
-    implementation(project(":sample-api"))
     
     implementation(libs.ktor.server.core)
     implementation(libs.ktor.server.netty)
@@ -23,12 +23,21 @@ dependencies {
     implementation(libs.ktor.server.cors)
     implementation(libs.ktor.server.websockets)
     implementation(libs.kotlinx.datetime)
+    implementation(libs.kotlinx.atomicfu)
     
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.serialization.json)
     
     implementation(libs.logback.classic)
 }
+
+//// Configure the local RPC plugin
+//obfuscatedRpc {
+//    obfuscationEnabled.set(false) // Disable obfuscation for cleaner generated code
+//    generateClient.set(true)      // Enable client generation
+//    generateServer.set(false)     // We don't need server stubs in the API package
+//}
+
 
 kotlin {
     jvmToolchain(17)
