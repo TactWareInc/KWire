@@ -11,7 +11,7 @@ application {
 dependencies {
     implementation(project(":core"))
     implementation(project(":obfuscation-support"))
-    implementation(project(":ktor-integration"))
+    implementation(project(":ktor-integration-server"))
     implementation(project(":sample-api"))
     
     implementation(libs.ktor.server.core)

@@ -12,7 +12,7 @@ application {
 dependencies {
     implementation(project(":core"))
     implementation(project(":obfuscation-support"))
-    implementation(project(":ktor-integration"))
+    implementation(project(":ktor-integration-server"))
     
     implementation(libs.ktor.server.core)
     implementation(libs.ktor.server.netty)

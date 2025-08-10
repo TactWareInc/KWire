@@ -18,7 +18,9 @@ rootProject.name = "kwire"
 
 include(":core")
 include(":obfuscation-support")
-include(":ktor-integration")
+include(":ktor-integration-client")
+include(":ktor-integration-server")
+
 include(":gradle-plugin")
 include(":sample-api")
 include(":sample-client")

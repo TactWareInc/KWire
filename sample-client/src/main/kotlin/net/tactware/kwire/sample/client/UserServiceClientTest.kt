@@ -83,7 +83,7 @@ class UserServiceClientTest(
         }
     }
 
-    private val transport = ktorWebSocketClientTransport {
+    private val transport = ktorWebSocketClientTransport(scope = scope) {
         serverUrl("$address/UserService")  
         pingInterval(15)                 
         requestTimeout(30_000)              

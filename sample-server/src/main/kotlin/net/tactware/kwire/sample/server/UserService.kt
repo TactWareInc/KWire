@@ -1,9 +1,9 @@
 package net.tactware.kwire.sample.server
 
-import com.obfuscated.rpc.sample.api.CreateUserRequest
-import com.obfuscated.rpc.sample.api.User
-import com.obfuscated.rpc.sample.api.UserService
-import com.obfuscated.rpc.sample.api.UserStats
+import net.tactware.kwire.sample.api.CreateUserRequest
+import net.tactware.kwire.sample.api.User
+import net.tactware.kwire.sample.api.UserService
+import net.tactware.kwire.sample.api.UserStats
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
