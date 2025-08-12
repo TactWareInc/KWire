@@ -25,6 +25,10 @@ class ObfuscatedRpcPlugin : Plugin<Project> {
             task.group = "obfuscated-rpc"
             task.description = "Generate RPC client and server stubs"
 
+            task.apiSourcePath.set(extension.apiSourcePath)
+            task.clientSourcePath.set(extension.clientSourcePath)
+            task.serverSourcePath.set(extension.serverSourcePath)
+
             // Configure task properties directly (no afterEvaluate needed)
             task.obfuscationEnabled.convention(extension.obfuscationEnabled)
             task.generateClient.convention(extension.generateClient)
@@ -32,10 +36,6 @@ class ObfuscatedRpcPlugin : Plugin<Project> {
 
             // Set input and output directories
             task.outputDir.set(project.layout.buildDirectory.dir("generated/rpc"))
-
-            // Find source directories (not individual files)
-            val mainSourceSet = project.extensions.getByType(org.gradle.api.tasks.SourceSetContainer::class.java).getByName("main")
-            task.inputSourceDirs.from(mainSourceSet.allSource.srcDirs)
         }
 
         // Make compile tasks depend on code generation

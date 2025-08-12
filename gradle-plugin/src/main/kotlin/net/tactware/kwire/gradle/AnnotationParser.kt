@@ -37,6 +37,35 @@ class AnnotationParser {
         return out
     }
 
+    internal fun parseClientAnchors(files: Collection<java.io.File>): List<ClientAnchorInfo> {
+        val texts = files.associateWith { runCatching { it.readText() }.getOrElse { "" } }
+            .filterValues { it.isNotBlank() }
+        val symbolIndex = buildSymbolIndex(texts)
+        val anchors = mutableListOf<ClientAnchorInfo>()
+
+        texts.forEach { (_, content) ->
+            val ctx = extractFileContext(content)
+            val pkg = ctx.pkg
+            RPCCLIENT_CLASS_RE.findAll(content).forEach { m ->
+                val rawArgs = m.groupValues.getOrNull(1) // (...), or null
+                val (svcName, genFactory) = parseRpcClientArgs(rawArgs)
+                val abstractName = m.groupValues[2].trim() // class name
+                val superTypeRaw = m.groupValues[3].substringBefore(',').trim() // first supertype
+                val interfaceFqn = qualifyType(superTypeRaw, ctx, symbolIndex)
+
+                anchors += ClientAnchorInfo(
+                    packageName = pkg,
+                    abstractClassName = abstractName,
+                    interfaceFqn = interfaceFqn,
+                    explicitServiceName = svcName?.ifBlank { null },
+                    generateFactory = genFactory
+                )
+            }
+        }
+        return anchors
+    }
+
+
     // ----------------------------- Regexes ---------------------------------
 
     private val PACKAGE_RE =
@@ -59,6 +88,32 @@ class AnnotationParser {
     private val TYPE_DECL_RE =
         Regex("""^\s*(?:public\s+|internal\s+|private\s+)?(?:data\s+)?(class|interface|enum\s+class|object)\s+(\w+)\b""",
             RegexOption.MULTILINE)
+
+    // @RpcClient(...) abstract class Foo : Some.Interface
+    private val RPCCLIENT_CLASS_RE = Regex(
+        // @RpcClient(...) [maybe other annotations/modifiers/newlines] abstract class X : Y
+        """@RpcClient\s*(\([^)]*\))?\s*                     # optional (...) args
+       (?:\r?\n\s*@[\w.]+(?:\([^)]*\))?\s*)*            # other annotations (optional)
+       (?:\s*(?:public|internal|private|open|final|sealed)\s+)*  # modifiers (optional)
+       \s*abstract\s+class\s+(\w+)                      # (2) class name
+       (?:\s*<[^>]*>)?                                  # generics (optional)
+       \s*:\s*([^,{]+)                                  # (3) first supertype (your service interface)
+    """.trimIndent(),
+        setOf(RegexOption.MULTILINE, RegexOption.COMMENTS)
+    )
+
+    // Regex: @RpcServer(...) abstract class Foo : com.pkg.UserService
+    private val RPCSERVER_CLASS_RE = Regex(
+        """@RpcServer\s*(\([^)]*\))?\s*
+       (?:\r?\n\s*@[\w.]+(?:\([^)]*\))?\s*)*
+       (?:\s*(?:public|internal|private|open|final|sealed)\s+)*
+       \s*abstract\s+class\s+(\w+)
+       (?:\s*<[^>]*>)?
+       \s*:\s*([^,{]+)
+    """.trimIndent(),
+        setOf(RegexOption.MULTILINE, RegexOption.COMMENTS)
+    )
+
 
     // ------------------------------- Context --------------------------------
 
@@ -89,6 +144,78 @@ class AnnotationParser {
     }
 
     // ------------------------------- Parsing --------------------------------
+
+    private fun parseRpcClientArgs(args: String?): Pair<String?, Boolean> {
+        if (args.isNullOrBlank()) return null to true
+        var service: String? = null
+        var generateFactory = true
+        val body = args.trim().removePrefix("(").removeSuffix(")")
+        if (body.isBlank()) return null to true
+        body.split(',').forEach { part ->
+            val kv = part.split('=', limit = 2).map { it.trim() }
+            if (kv.size == 2) {
+                when (kv[0]) {
+                    "service" -> service = kv[1].trim().trim('"')
+                    "generateFactory" -> generateFactory = kv[1].toBooleanStrictOrNull() ?: generateFactory
+                }
+            }
+        }
+        return service to generateFactory
+    }
+
+    // overload for Gradle FileCollection
+    internal fun parseClientAnchors(files: org.gradle.api.file.FileCollection): List<ClientAnchorInfo> =
+        parseClientAnchors(files.files)
+
+
+    private fun parseRpcServerArgs(args: String?): Pair<String?, Boolean> {
+        if (args.isNullOrBlank()) return null to true
+        var service: String? = null
+        var generateFactory = true
+        val body = args.trim().removePrefix("(").removeSuffix(")")
+        body.split(',').forEach { part ->
+            val kv = part.split('=', limit = 2).map { it.trim() }
+            if (kv.size == 2) {
+                when (kv[0]) {
+                    "service" -> service = kv[1].trim().trim('"')
+                    "generateFactory" -> generateFactory = kv[1].toBooleanStrictOrNull() ?: generateFactory
+                }
+            }
+        }
+        return service to generateFactory
+    }
+
+    internal fun parseServerAnchors(files: Collection<java.io.File>): List<ServerAnchorInfo> {
+        val texts = files.associateWith { runCatching { it.readText() }.getOrElse { "" } }
+            .filterValues { it.isNotBlank() }
+        val symbolIndex = buildSymbolIndex(texts)
+        val anchors = mutableListOf<ServerAnchorInfo>()
+
+        texts.forEach { (_, content) ->
+            val ctx = extractFileContext(content)
+            val pkg = ctx.pkg
+            RPCSERVER_CLASS_RE.findAll(content).forEach { m ->
+                val rawArgs = m.groupValues.getOrNull(1)
+                val (svcName, genFactory) = parseRpcServerArgs(rawArgs)
+                val abstractName = m.groupValues[2].trim()
+                val superTypeRaw = m.groupValues[3].substringBefore(',').trim()
+                val interfaceFqn = qualifyType(superTypeRaw, ctx, symbolIndex)
+                anchors += ServerAnchorInfo(
+                    packageName = pkg,
+                    abstractClassName = abstractName,
+                    interfaceFqn = interfaceFqn,
+                    explicitServiceName = svcName?.ifBlank { null },
+                    generateFactory = genFactory
+                )
+            }
+        }
+        return anchors
+    }
+
+    // Overload if you need it:
+    internal fun parseServerAnchors(files: org.gradle.api.file.FileCollection): List<ServerAnchorInfo> =
+        parseServerAnchors(files.files)
+
 
     internal fun parseServices(
         content: String,

@@ -3,6 +3,7 @@ package net.tactware.kwire.gradle
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.FileCollection
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
 import java.io.File
@@ -13,9 +14,11 @@ import java.io.File
 @CacheableTask
 abstract class GenerateRpcStubsTask : DefaultTask() {
 
-    @get:InputFiles
-    @get:PathSensitive(PathSensitivity.RELATIVE)
-    abstract val inputSourceDirs: ConfigurableFileCollection
+    @get:Input abstract val apiSourcePath: Property<String>
+    @get:Input abstract val clientSourcePath: Property<String>
+
+    @get:Input abstract val serverSourcePath: Property<String>
+
 
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
@@ -41,72 +44,89 @@ abstract class GenerateRpcStubsTask : DefaultTask() {
         logger.lifecycle("Generate server: ${generateServer.get()}")
 
         // Debug: List all source files being processed
-        val sourceFiles = collectSourceFiles()
-        logger.lifecycle("Processing ${sourceFiles.files.size} source files:")
-        sourceFiles.files.forEach { file ->
+        val apiFiles = collectSourceFiles(File(apiSourcePath.get()))
+        logger.lifecycle("Processing ${apiFiles.files.size} source files:")
+        apiFiles.files.forEach { file ->
+            logger.lifecycle("  - ${file.absolutePath}")
+        }
+
+        val clientFiles = collectSourceFiles(File(clientSourcePath.get()))
+        logger.lifecycle("Processing ${clientFiles.files.size} client source files:")
+        clientFiles.files.forEach { file ->
             logger.lifecycle("  - ${file.absolutePath}")
         }
 
         try {
             // Parse source files to find @RpcService annotated interfaces
             val parser = AnnotationParser()
-            val services = parser.parseServices(sourceFiles)
+            val services = parser.parseServices(apiFiles)
+            val servicesByInterface = services.associateBy { "${it.packageName}.${it.interfaceName}" }
+
+// 2) Parse client anchors from client module
+            val anchors = parser.parseClientAnchors(clientFiles)
+
+            val serverFiles = collectSourceFiles(File(serverSourcePath.get()))
+            val serverAnchors = parser.parseServerAnchors(serverFiles)
 
             if (services.isEmpty()) {
                 logger.warn("No @RpcService annotated interfaces found in source files")
                 logger.warn("Checked files:")
-                sourceFiles.files.forEach { file ->
+                apiFiles.files.forEach { file ->
                     logger.warn("  - ${file.name}: ${if (file.readText().contains("@RpcService")) "HAS @RpcService" else "no @RpcService"}")
                 }
+            }
+
+            if (anchors.isEmpty()){
+                logger.warn("No client anchors found in source files")
+                logger.warn("Checked files:")
+                clientFiles.files.forEach { file ->
+                    logger.warn("  - ${file.name}: ${if (file.readText().contains("@RpcClient")) "HAS @RpcClient" else "no @RpcClient"}")
+                }
+            }
+
+            if (serverAnchors.isEmpty()){
+                logger.warn("No server anchors found in source files")
+                logger.warn("Checked files:")
+                serverFiles.files.forEach { file ->
+                    logger.warn("  - ${file.name}: ${if (file.readText().contains("@RpcServer")) "HAS @RpcServer" else "no @RpcServer"}")
+                }
+            }
+
+            if (anchors.isEmpty() && services.isEmpty()){
                 return
             }
 
+
             logger.lifecycle("Found ${services.size} RPC services: ${services.map { "${it.interfaceName} (${it.serviceName})" }}")
+            logger.lifecycle("Found ${anchors.size} client anchors: ${anchors.map { "${it.abstractClassName} (${it.interfaceFqn})" }}")
+            val generator = ServiceClientGenerator()
+            anchors.forEach { anchor ->
+                val svc = servicesByInterface[anchor.interfaceFqn]
+                    ?: error("No @RpcService found for interface ${anchor.interfaceFqn} used by ${anchor.abstractClassName}")
+                val adjusted = svc
 
-            // Validate services before processing
-            services.forEach { service ->
-                logger.lifecycle("Validating service: ${service.interfaceName} -> ${service.serviceName}")
-                logger.lifecycle("  Package: ${service.packageName}")
-                logger.lifecycle("  Methods (${service.methods.size}):")
-                
-                service.methods.forEach { method ->
-                    logger.lifecycle("    - ${method.methodName} -> ${method.rpcMethodId}")
-                    logger.lifecycle("      Return type: ${method.returnType} (streaming: ${method.isStreaming})")
-                    logger.lifecycle("      Parameters: ${method.parameters.map { "${it.name}: ${it.type}" }}")
-                }
-                
-                // Verify that the interface name is valid
-                if (!service.interfaceName.matches(Regex("""\w+"""))) {
-                    throw IllegalArgumentException("Invalid interface name: ${service.interfaceName}")
-                }
+                val src = generator.generate(adjusted, anchor)
+
+                val outputDir = outputDir.get().asFile
+                val packageDir = File(outputDir, anchor.packageName.replace('.', '/'))
+                packageDir.mkdirs()
+                val outputFile = File(packageDir, "${anchor.abstractClassName}Impl.kt")
+                outputFile.writeText(src)
             }
 
-            services.forEach { service ->
-                logger.lifecycle("Generating code for service: ${service.interfaceName} -> ${service.serviceName}")
+            val serverGenerator = ServiceServerGenerator()
+            serverAnchors.forEach { anchor ->
+                val svc = servicesByInterface[anchor.interfaceFqn]
+                    ?: error("No @RpcService found for interface ${anchor.interfaceFqn} used by ${anchor.abstractClassName}")
+                val adjusted = svc
 
-                try {
-                    if (generateClient.get()) {
-                        generateCleanApiClient(service, outputDirectory)
-                    }
+                val src = serverGenerator.generate(adjusted, anchor)
 
-                    if (generateServer.get()) {
-//                        generateServerStub(service, outputDirectory)
-                    }
-                } catch (e: Exception) {
-                    logger.error("Error generating code for service ${service.interfaceName}: ${e.message}")
-                    e.printStackTrace()
-                    throw e
-                }
-            }
-
-            if (generateClient.get() && services.isNotEmpty()) {
-                try {
-//                    generateApiClientFactory(services, outputDirectory)
-                } catch (e: Exception) {
-                    logger.error("Error generating API client factory: ${e.message}")
-                    e.printStackTrace()
-                    throw e
-                }
+                val outputDir = outputDir.get().asFile
+                val packageDir = File(outputDir, anchor.packageName.replace('.', '/'))
+                packageDir.mkdirs()
+                val outputFile = File(packageDir, "${anchor.abstractClassName}Server.kt")
+                outputFile.writeText(src)
             }
         } catch (e: Exception) {
             logger.error("Error generating RPC stubs: ${e.message}")
@@ -115,74 +135,13 @@ abstract class GenerateRpcStubsTask : DefaultTask() {
         }
     }
 
-    private fun collectSourceFiles(): org.gradle.api.file.FileCollection {
-        val project = this.project
-
-        // Debug: Check what inputSourceDirs contains
-        logger.info("Input source dirs: ${inputSourceDirs.files}")
-
-        val allFiles = project.files()
-
-        inputSourceDirs.files.forEach { sourceDir ->
-            logger.info("Checking source dir: ${sourceDir.absolutePath}")
-            if (sourceDir.exists() && sourceDir.isDirectory) {
-                val kotlinFiles = project.fileTree(sourceDir) {
-                    it.include("**/*.kt")
-                }
-                logger.info("Found ${kotlinFiles.files.size} Kotlin files in ${sourceDir.name}")
-                kotlinFiles.files.forEach { file ->
-                    logger.info("  - ${file.absolutePath}")
-                }
-                allFiles.from(kotlinFiles)
-            } else {
-                logger.warn("Source dir does not exist or is not a directory: ${sourceDir.absolutePath}")
-            }
+    private fun collectSourceFiles(dir: File): FileCollection {
+        if (!dir.exists()) {
+            logger.warn("Source path does not exist: $dir")
+            return project.files()
         }
-
-        return allFiles
+        return project.fileTree(dir) { it.include("**/*.kt") }
     }
 
 
-
-//    private fun generateServerStub(service: ServiceInfo, outputDir: File) {
-//        val generator = RpcServerStubGenerator()
-//        val content = generator.generateServerStub(
-//            serviceName = service.serviceName,
-//            interfaceName = service.interfaceName,
-//            packageName = service.packageName,
-//            obfuscationEnabled = obfuscationEnabled.get()
-//        )
-//
-//        val packageDir = File(outputDir, service.packageName.replace('.', '/'))
-//        packageDir.mkdirs()
-//        val outputFile = File(packageDir, "${service.interfaceName}Server.kt")
-//        outputFile.writeText(content)
-//
-//        logger.info("Generated server stub: ${outputFile.relativeTo(outputDir)}")
-//    }
-
-    private fun generateCleanApiClient(service: ServiceInfo, outputDir: File) {
-        val generator = ServiceClientGenerator()
-        val content = generator.generate(service)
-
-        val packageDir = File(outputDir, service.packageName.replace('.', '/'))
-        packageDir.mkdirs()
-        val outputFile = File(packageDir, "${service.interfaceName}ClientImpl.kt")
-        outputFile.writeText(content)
-
-        logger.info("Generated clean API client: ${outputFile.relativeTo(outputDir)}")
-    }
-
-//    private fun generateApiClientFactory(services: List<ServiceInfo>, outputDir: File) {
-//        val generator = ApiClientFactoryGenerator()
-//        val content = generator.generateApiClientFactory(services)
-//
-//        // Use a common generated package for the factory
-//        val packageDir = File(outputDir, "com/obfuscated/rpc/generated")
-//        packageDir.mkdirs()
-//        val outputFile = File(packageDir, "GeneratedApiClient.kt")
-//        outputFile.writeText(content)
-//
-//        logger.info("Generated API client factory: ${outputFile.relativeTo(outputDir)}")
-//    }
 }

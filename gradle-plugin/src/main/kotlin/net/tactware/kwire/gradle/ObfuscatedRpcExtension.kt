@@ -1,5 +1,6 @@
 package net.tactware.kwire.gradle
 
+import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.SetProperty
 import java.io.File
@@ -8,7 +9,16 @@ import java.io.File
  * Extension for configuring the Obfuscated RPC plugin.
  */
 abstract class ObfuscatedRpcExtension {
-    
+
+    /** Path (relative or absolute) to where @RpcService sources live */
+    var apiSourcePath: String = ""
+
+    /** Path (relative or absolute) to where @RpcClient sources live */
+    var clientSourcePath: String = ""
+
+    var serverSourcePath: String = ""
+
+
     /**
      * Whether to enable obfuscation for generated code.
      */
