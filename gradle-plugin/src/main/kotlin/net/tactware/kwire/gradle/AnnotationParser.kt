@@ -91,13 +91,12 @@ class AnnotationParser {
 
     // @RpcClient(...) abstract class Foo : Some.Interface
     private val RPCCLIENT_CLASS_RE = Regex(
-        // @RpcClient(...) [maybe other annotations/modifiers/newlines] abstract class X : Y
-        """@RpcClient\s*(\([^)]*\))?\s*                     # optional (...) args
-       (?:\r?\n\s*@[\w.]+(?:\([^)]*\))?\s*)*            # other annotations (optional)
-       (?:\s*(?:public|internal|private|open|final|sealed)\s+)*  # modifiers (optional)
-       \s*abstract\s+class\s+(\w+)                      # (2) class name
-       (?:\s*<[^>]*>)?                                  # generics (optional)
-       \s*:\s*([^,{]+)                                  # (3) first supertype (your service interface)
+        """@RpcClient\s*(\([^)]*\))?\s*                 
+       (?:\r?\n\s*@[\w.]+(?:\([^)]*\))?\s*)*            
+       (?:\s*(?:public|internal|private|open|final|sealed)\s+)*  
+       \s*abstract\s+class\s+(\w+)                     
+       (?:\s*<[^>]*>)?                                 
+       \s*:\s*([^,{]+)                                 
     """.trimIndent(),
         setOf(RegexOption.MULTILINE, RegexOption.COMMENTS)
     )

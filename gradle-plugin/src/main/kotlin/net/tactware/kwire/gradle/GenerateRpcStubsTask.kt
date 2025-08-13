@@ -56,6 +56,12 @@ abstract class GenerateRpcStubsTask : DefaultTask() {
             logger.lifecycle("  - ${file.absolutePath}")
         }
 
+        val serverFiles = collectSourceFiles(File(serverSourcePath.get()))
+        logger.lifecycle("Processing ${serverFiles.files.size} server source files:")
+        serverFiles.files.forEach { file ->
+            logger.lifecycle("  - ${file.absolutePath}")
+        }
+
         try {
             // Parse source files to find @RpcService annotated interfaces
             val parser = AnnotationParser()
@@ -63,10 +69,19 @@ abstract class GenerateRpcStubsTask : DefaultTask() {
             val servicesByInterface = services.associateBy { "${it.packageName}.${it.interfaceName}" }
 
 // 2) Parse client anchors from client module
-            val anchors = parser.parseClientAnchors(clientFiles)
+            val anchors =if (!clientFiles.isEmpty()) {
+              parser.parseClientAnchors(clientFiles)
+            } else {
+                logger.warn("No client source files found at ${clientSourcePath.get()}. Skipping client anchor parsing.")
+                emptyList()
+            }
 
-            val serverFiles = collectSourceFiles(File(serverSourcePath.get()))
-            val serverAnchors = parser.parseServerAnchors(serverFiles)
+            val serverAnchors =  if (!serverFiles.isEmpty()) {
+                parser.parseServerAnchors(serverFiles)
+            } else{
+                logger.warn("No server source files found at ${serverSourcePath.get()}. Skipping server anchor parsing.")
+                emptyList()
+            }
 
             if (services.isEmpty()) {
                 logger.warn("No @RpcService annotated interfaces found in source files")
@@ -91,11 +106,6 @@ abstract class GenerateRpcStubsTask : DefaultTask() {
                     logger.warn("  - ${file.name}: ${if (file.readText().contains("@RpcServer")) "HAS @RpcServer" else "no @RpcServer"}")
                 }
             }
-
-            if (anchors.isEmpty() && services.isEmpty()){
-                return
-            }
-
 
             logger.lifecycle("Found ${services.size} RPC services: ${services.map { "${it.interfaceName} (${it.serviceName})" }}")
             logger.lifecycle("Found ${anchors.size} client anchors: ${anchors.map { "${it.abstractClassName} (${it.interfaceFqn})" }}")
@@ -125,7 +135,7 @@ abstract class GenerateRpcStubsTask : DefaultTask() {
                 val outputDir = outputDir.get().asFile
                 val packageDir = File(outputDir, anchor.packageName.replace('.', '/'))
                 packageDir.mkdirs()
-                val outputFile = File(packageDir, "${anchor.abstractClassName}Server.kt")
+                val outputFile = File(packageDir, "${anchor.abstractClassName}Impl.kt")
                 outputFile.writeText(src)
             }
         } catch (e: Exception) {
