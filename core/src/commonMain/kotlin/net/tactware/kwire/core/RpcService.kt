@@ -67,3 +67,22 @@ data class RpcMethodMetadata(
     val returnType: String
 )
 
+
+@Target(AnnotationTarget.CLASS)
+@Retention(AnnotationRetention.SOURCE)
+annotation class RpcClient(
+    /** Optional explicit service name; if blank we infer it from the interface’s @RpcService */
+    val service: String = "",
+    /** Whether to emit a top-level factory next to the client class */
+    val generateFactory: Boolean = true
+)
+
+
+@Target(AnnotationTarget.CLASS)
+@Retention(AnnotationRetention.SOURCE)
+annotation class RpcServer(
+    /** Optional explicit service name; defaults to the @RpcService value */
+    val service: String = "",
+    /** Whether to emit a factory alongside the server shim */
+    val generateFactory: Boolean = true
+)

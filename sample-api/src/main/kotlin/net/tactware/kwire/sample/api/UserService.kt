@@ -25,6 +25,9 @@ interface UserService {
     
     @RpcMethod("streamUsers")
     fun streamUsers(): Flow<List<User>>
+
+    @RpcMethod("streamUsersStats")
+    fun streamUsersStats(): Flow<UserStats>
 }
 
 

@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.serialization)
+    id("net.tactware.kwire.plugin")
     application
 }
 
@@ -26,4 +27,9 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     
     implementation(libs.logback.classic)
+}
+
+obfuscatedRpc {
+    this.apiSourcePath = "../sample-api/src/main/kotlin"
+    this.clientSourcePath = "src/main/kotlin"
 }
