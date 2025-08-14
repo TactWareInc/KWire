@@ -14,4 +14,4 @@ data class RpcError(
     val errorCode: String,
     val errorMessage: String,
     val errorDetails: @Contextual JsonElement? = null
-) : net.tactware.kwire.core.messages.RpcMessage()
+) : RpcMessage()

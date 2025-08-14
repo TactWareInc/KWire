@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches: [ "**" ]
+  pull_request:
+    branches: [ "**" ]
+  # Manual trigger (useful for testing and, later, publishing)
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Show Gradle version
+        run: ./gradlew --version
+
+      - name: Build (includes tests)
+        run: ./gradlew generateRpcStubs build --stacktrace
+
+      # On failure, upload test reports and logs to help debugging
+      - name: Upload build reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-reports
+          path: |
+            **/build/reports/**
+            **/build/test-results/**
+          if-no-files-found: ignore
+
+  # Placeholder for publishing, disabled by default. When you're ready to publish:
+  #   1) Set if: condition to true or to a condition like startsWith(github.ref, 'refs/tags/v').
+  #   2) Configure credentials/secrets and replace the echo with real publish commands.
+  publish:
+    name: Publish (placeholder)
+    needs: build
+    runs-on: ubuntu-latest
+    if: false  # TODO: enable when ready (e.g., if: startsWith(github.ref, 'refs/tags/v'))
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Configure Gradle (optional)
+        run: |
+          echo "org.gradle.parallel=true" >> ~/.gradle/gradle.properties
+          echo "org.gradle.caching=true" >> ~/.gradle/gradle.properties
+
+      - name: Placeholder publish step
+        run: |
+          echo "Publishing is currently disabled."
+          echo "TODO: Configure credentials and enable publish when ready."
+          # Example for later:
+          # ./gradlew publish --stacktrace
+          # To publish to Maven Central or another repo, set up credentials via secrets:
+          #   - name: Configure credentials
+          #     run: |
+          #       mkdir -p ~/.gradle
+          #       cat <<EOF >> ~/.gradle/gradle.properties
+          #       mavenUsername=${{ secrets.MAVEN_USERNAME }}
+          #       mavenPassword=${{ secrets.MAVEN_PASSWORD }}
+          #       signing.keyId=${{ secrets.SIGNING_KEY_ID }}
+          #       signing.password=${{ secrets.SIGNING_PASSWORD }}
+          #       signing.secretKeyRingFile=/home/runner/work/secret.gpg
+          #       EOF
+          # And ensure repositories in publishing { } point to your target repository.

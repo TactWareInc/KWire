@@ -6,4 +6,4 @@ import kotlinx.serialization.Serializable
  * Stream-specific messages for Flow handling.
  */
 @Serializable
-sealed class StreamMessage : net.tactware.kwire.core.messages.RpcMessage()
+sealed class StreamMessage : RpcMessage()

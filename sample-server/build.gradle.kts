@@ -34,7 +34,7 @@ kotlin {
 }
 
 obfuscatedRpc {
-    this.apiSourcePath = "../sample-api/src/main/kotlin"
-    this.serverSourcePath = "src/main/kotlin"
+    this.apiSourcePath = rootProject.projectDir.resolve("sample-api/src/main/kotlin").absolutePath
+    this.serverSourcePath = rootProject.projectDir.resolve("sample-server/src/main/kotlin").absolutePath
 }
 

@@ -15,4 +15,4 @@ data class StreamError(
     val errorCode: String,
     val errorMessage: String,
     val errorDetails: @Contextual JsonElement? = null
-) : net.tactware.kwire.core.messages.StreamMessage()
+) : StreamMessage()

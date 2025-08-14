@@ -103,12 +103,13 @@ class AnnotationParser {
 
     // Regex: @RpcServer(...) abstract class Foo : com.pkg.UserService
     private val RPCSERVER_CLASS_RE = Regex(
-        """@RpcServer\s*(\([^)]*\))?\s*
-       (?:\r?\n\s*@[\w.]+(?:\([^)]*\))?\s*)*
+        """@RpcServer\s*
+       (?:\r?\n\s*@[\w.]+(?:\([^)]*\))?\s*)*    
        (?:\s*(?:public|internal|private|open|final|sealed)\s+)*
-       \s*abstract\s+class\s+(\w+)
-       (?:\s*<[^>]*>)?
-       \s*:\s*([^,{]+)
+       abstract\s+class\s+(\w+)                  
+       \(\s*impl\s*:\s*([\w.]+)\s*\)             
+       (?:\s*<[^>]*>)?                           
+       (?:\s*:\s*([\w.]+))?                      
     """.trimIndent(),
         setOf(RegexOption.MULTILINE, RegexOption.COMMENTS)
     )
@@ -193,15 +194,30 @@ class AnnotationParser {
         texts.forEach { (_, content) ->
             val ctx = extractFileContext(content)
             val pkg = ctx.pkg
+
+
+
             RPCSERVER_CLASS_RE.findAll(content).forEach { m ->
                 val rawArgs = m.groupValues.getOrNull(1)
+                val implTypeRaw  =m.groupValues[2].trim()          // e.g. "UserService" or "com.pkg.UserService" (maybe generic/nullable)
+                val superTypeRaw = m.groupValues.getOrNull(4)?.trim().orEmpty() // optional, not authoritative
+
                 val (svcName, genFactory) = parseRpcServerArgs(rawArgs)
-                val abstractName = m.groupValues[2].trim()
-                val superTypeRaw = m.groupValues[3].substringBefore(',').trim()
-                val interfaceFqn = qualifyType(superTypeRaw, ctx, symbolIndex)
+
+                // Normalize the impl type to its base (strip generics/nullability so qualifyType can resolve imports)
+                val implBase = implTypeRaw
+                    .substringBefore('<')     // drop generics, if any
+                    .removeSuffix("?")        // drop nullability
+                    .trim()
+
+                val interfaceFqn = qualifyType(implBase, ctx, symbolIndex)
+
+                // (Optional) If a supertype is present and disagrees, you could warn here later.
+                // e.g., if (superTypeRaw.isNotBlank() && !superMatchesImpl(superTypeRaw, implBase)) { ... }
+
                 anchors += ServerAnchorInfo(
                     packageName = pkg,
-                    abstractClassName = abstractName,
+                    abstractClassName = rawArgs!!,
                     interfaceFqn = interfaceFqn,
                     explicitServiceName = svcName?.ifBlank { null },
                     generateFactory = genFactory
