@@ -11,6 +11,8 @@ import net.tactware.kwire.sample.api.CreateUserRequest
 import net.tactware.kwire.sample.api.User
 import net.tactware.kwire.sample.api.UserService
 import net.tactware.kwire.sample.api.UserStats
+import kotlin.random.Random
+import kotlin.random.nextInt
 
 class UserServiceImpl : UserService {
 
@@ -25,10 +27,10 @@ class UserServiceImpl : UserService {
         CoroutineScope(Dispatchers.Default).launch {
             while (true) {
                 // Simulate user activity
-                kotlinx.coroutines.delay(10000)
+                kotlinx.coroutines.delay(Random.nextLong(1000, 50000))
                 if (_users.value.isNotEmpty()) {
                     val updatedUsers = _users.value.map { user ->
-                        if (kotlin.random.Random.nextBoolean()) {
+                        if (Random.nextBoolean()) {
                             user.copy(isActive = !user.isActive)
                         } else {
                             user
@@ -38,7 +40,7 @@ class UserServiceImpl : UserService {
                     // Update stats
                     val totalUsers = _users.value.size
                     val activeUsers = _users.value.count { it.isActive }
-                    val averageAge = if (totalUsers > 0) _users.value.map { it.age }.average() else 0.0
+                    val averageAge = Random.nextInt(18..65).toDouble() // Simulate average age
                     _userStats.value = UserStats(totalUsers, activeUsers, averageAge)
                 }
             }

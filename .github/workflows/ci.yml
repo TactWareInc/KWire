@@ -28,7 +28,7 @@ jobs:
         run: ./gradlew --version
 
       - name: Build (includes tests)
-        run: ./gradlew build --stacktrace
+        run: ./gradlew build generateRpcStubs --stacktrace
 
       # On failure, upload test reports and logs to help debugging
       - name: Upload build reports

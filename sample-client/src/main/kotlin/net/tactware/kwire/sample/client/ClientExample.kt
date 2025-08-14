@@ -36,4 +36,8 @@ fun main() = runBlocking {
    val users = client.getAllUsers()
 
     logger.info("Received users: $users")
+
+    client.streamUsersStats().collect {
+        logger.info("User stats: $it")
+    }
 }
