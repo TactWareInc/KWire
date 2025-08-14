@@ -16,4 +16,4 @@ data class StreamStart(
     val serviceName: String,
     val methodId: String,
     val parameters: List<@Contextual JsonElement> = emptyList()
-) : net.tactware.kwire.core.messages.StreamMessage()
+) : StreamMessage()

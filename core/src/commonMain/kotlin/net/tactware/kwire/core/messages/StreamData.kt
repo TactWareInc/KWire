@@ -13,4 +13,4 @@ data class StreamData(
     override val timestamp: Long,
     val streamId: String,
     val data: @Contextual JsonElement
-) : net.tactware.kwire.core.messages.StreamMessage()
+) : StreamMessage()

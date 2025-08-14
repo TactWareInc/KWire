@@ -10,4 +10,4 @@ data class StreamEnd(
     override val messageId: String,
     override val timestamp: Long,
     val streamId: String
-) : net.tactware.kwire.core.messages.StreamMessage()
+) : StreamMessage()

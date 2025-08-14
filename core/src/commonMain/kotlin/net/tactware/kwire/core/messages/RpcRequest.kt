@@ -15,4 +15,4 @@ data class RpcRequest(
     val methodId: String,
     val parameters: List<@Contextual JsonElement> = emptyList(),
     val streaming: Boolean = false
-) : net.tactware.kwire.core.messages.RpcMessage()
+) : RpcMessage()
