@@ -93,6 +93,7 @@ class ServiceServerGenerator {
             .addModifiers(KModifier.PUBLIC)
             .primaryConstructor(ctor)
             .superclass(target.superType)
+            .addSuperclassConstructorParameter("implementation")
             .addProperty(
                 PropertySpec.builder("transport", ClassName("net.tactware.kwire.core", "RpcTransport"))
                     .initializer("transport")

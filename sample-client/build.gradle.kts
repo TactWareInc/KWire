@@ -30,6 +30,6 @@ dependencies {
 }
 
 obfuscatedRpc {
-    this.apiSourcePath = "../sample-api/src/main/kotlin"
-    this.clientSourcePath = "src/main/kotlin"
+    this.apiSourcePath = rootProject.projectDir.resolve("sample-api/src/main/kotlin").absolutePath
+    this.clientSourcePath = rootProject.projectDir.resolve("sample-client/src/main/kotlin").absolutePath
 }
