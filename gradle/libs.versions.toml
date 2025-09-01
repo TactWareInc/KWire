@@ -12,6 +12,7 @@ ktor = "3.1.0"
 # Other libraries
 kotlinpoet = "1.18.1"
 logback = "1.4.14"
+pluginPublish = "1.2.1"
 
 [libraries]
 # Kotlin
@@ -63,3 +64,4 @@ logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "lo
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+kwire-plugin = { id = "net.tactware.kwire.gradle", version = "1.0.1" }

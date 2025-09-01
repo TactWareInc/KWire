@@ -189,3 +189,21 @@ These documents are generic in places; the module and package names in this READ
 
 ## License
 Unless otherwise specified in the repository, this project is provided under the license declared in the repository root or headers (add your license text or file reference here).
+
+## Local credentials (local.properties)
+To keep secrets out of gradle.properties, the build now reads publishing/signing credentials from a local.properties file at the project root (if present), then falls back to gradle.properties, then environment variables.
+
+Add a local.properties with the following keys (do not commit this file):
+
+```
+ossrhUsername=your-sonatype-username
+ossrhPassword=your-sonatype-password
+signing.keyId=XXXXXXXX
+signing.key=-----BEGIN PGP PRIVATE KEY BLOCK-----\n...\n-----END PGP PRIVATE KEY BLOCK-----
+signing.password=your-key-passphrase
+```
+
+Notes:
+- local.properties should be excluded from version control (it is commonly ignored by default; ensure your VCS ignores it).
+- These values are used only for the modules published to Maven Central: core, ktor-integration-client, ktor-integration-server.
+- Environment variable fallbacks are still supported: OSSRH_USERNAME, OSSRH_PASSWORD, SIGNING_KEY, SIGNING_PASSWORD.

@@ -1,7 +1,7 @@
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.serialization)
-    id("net.tactware.kwire.plugin")
+    alias(libs.plugins.kwire.plugin)
     application
 }
 
@@ -29,7 +29,7 @@ dependencies {
     implementation(libs.logback.classic)
 }
 
-obfuscatedRpc {
+rpcGenerator {
     this.apiSourcePath = rootProject.projectDir.resolve("sample-api/src/main/kotlin").absolutePath
     this.clientSourcePath = rootProject.projectDir.resolve("sample-client/src/main/kotlin").absolutePath
 }
