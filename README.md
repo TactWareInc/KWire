@@ -1,5 +1,7 @@
 # KWire
 
+[![Maven Central](https://img.shields.io/maven-central/v/net.tactware.kwire/core.svg?label=Maven%20Central)](https://central.sonatype.com/namespace/net.tactware.kwire)
+
 KWire is a Kotlin Multiplatform RPC toolkit with  Ktor integration, kotlinx.serialization, and optional obfuscation. It provides a small set of core message types, a pluggable transport abstraction, a Gradle plugin for client/server stub generation, and production-ready WebSocket transports for Ktor.
 
 This repository contains the core library, integration modules, an obfuscation-support module, a Gradle plugin, and runnable samples for a UserService over WebSockets.
@@ -110,12 +112,24 @@ Note: If run tasks fail due to mismatched mainClass, open the sample modules in 
 
 
 ## Gradle plugin (code generation)
-The plugin net.tactware.kwire.plugin can generate RPC client and server stubs from your annotated interfaces.
+The Gradle plugin (id: net.tactware.kwire.gradle) can generate RPC client and server stubs from your annotated interfaces.
 
-In your build.gradle.kts:
+Apply via plugins block (direct):
 ```kotlin
 plugins {
-    id("net.tactware.kwire.plugin")
+    id("net.tactware.kwire.gradle") version "1.0.1"
+}
+```
+
+Or via Version Catalog (libs.versions.toml):
+```toml
+[plugins]
+kwire-plugin = { id = "net.tactware.kwire.gradle", version = "1.0.1" }
+```
+Then in build.gradle.kts:
+```kotlin
+plugins {
+    alias(libs.plugins.kwire.plugin)
 }
 
 obfuscatedRpc {

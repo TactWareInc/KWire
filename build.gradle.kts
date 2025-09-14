@@ -20,22 +20,23 @@ version = "1.0.0"
 
 allprojects {
     group = "net.tactware.kwire"
-    version = "1.0.0"
+    version = "1.0.1"
     
     repositories {
         mavenCentral()
     }
 }
 
-//nexusPublishing {
-//    repositories {
-//        sonatype {
-//            nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
-//            snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
-//            username.set(findProperty("sonatypeUsername") as String)
-//            password.set(findProperty("sonatypePassword") as String)
-//        }
-//    }
-//}
+subprojects {
+    plugins.withId("maven-publish") {
+        the<org.gradle.api.publish.PublishingExtension>().repositories {
+            maven {
+                name = "staging"
+                url = uri(rootProject.layout.buildDirectory.dir("staging-deploy"))
+            }
+        }
+    }
+}
+
 
 

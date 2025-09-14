@@ -1,15 +1,18 @@
+import java.util.Properties
+import kotlin.apply
+
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.kotlin.serialization)
-    `maven-publish`
-    id("org.jreleaser") version "1.20.0"
+    id("com.vanniktech.maven.publish") version "0.34.0"
+    signing
 }
 
 kotlin {
     jvmToolchain(17)
     
     jvm()
-    
+
     js(IR) {
         browser()
         nodejs()
@@ -67,70 +70,56 @@ kotlin {
     }
 }
 
-publishing {
-    publications.withType<MavenPublication>().configureEach {
 
-        version = rootProject.version as String
+mavenPublishing {
+    // Configure publishing to Maven Central
+    publishToMavenCentral()
 
-        pom {
-            name.set("KWire")
-            description.set("RPC library alternative to gRPC, optimized for Kotlin Multiplatform")
-            url.set("https://github.com/TactWareInc/KWire") // or site
+    signAllPublications()
 
-            licenses {
-                license {
-                    name.set("Apache-2.0")
-                    url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
-                }
-            }
-            developers {
-                developer {
-                    id.set("kmbisset89")
-                    name.set("Kerry Bisset")
-                    email.set("kerry.bisset@tactware.net")
-                }
-            }
-            scm {
-                url.set("https://github.com/TactWareInc/KWire")
+    // Configure project coordinates
+    coordinates(rootProject.group as String, "ktor-integration-client", rootProject.version as String)
+
+    // Configure POM metadata
+    pom {
+        name.set("KWire")
+        description.set("RPC library alternative to gRPC, optimized for Kotlin Multiplatform")
+        inceptionYear.set("2024")
+        url.set("https://github.com/TactWareInc/KWire")
+
+        licenses {
+            license {
+                name.set("Apache-2.0")
+                url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
+                distribution.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
             }
         }
-    }
-}
 
-
-jreleaser {
-    release{
-        github{
-            this.name.set("KWire")
-            commitAuthor {
+        developers {
+            developer {
+                id.set("kmbisset89")
                 name.set("Kerry Bisset")
-                email.set("kerry.bisset@tactware.net")
+                url.set("https://github.com/kmbisset89")
             }
-            tagName.set("v${project.version}")
         }
-    }
-    signing{
-        setActive("ALWAYS")
-        this.armored.set(true)
-        this.secretKey.set(findProperty("signing.key") as String?)
-        this.publicKey.set(findProperty("signing.publickey") as String?)
-    }
-    deploy{
-        maven {
-            mavenCentral {
-                create("sonatype") {
-                    setActive("ALWAYS")
-                    url.set("https://central.sonatype.com/api/v1/publisher")
-                    stagingRepository("target/staging-deploy")
-                    this.password.set(findProperty("sonatypePassword") as String?)
-                    this.username.set(findProperty("sonatypeUsername") as String?)
-                }
-            }
+
+        scm {
+            url.set("https://github.com/TactWareInc/KWire")
+            connection.set("scm:git:git://github.com/TactWareInc/KWire.git")
+            developerConnection.set("scm:git:ssh://git@github.com/TactWareInc/KWire.git")
         }
     }
 }
+
+signing {
+    sign(publishing.publications)
+    useInMemoryPgpKeys(
+        findProperty("signing.keyId") as String?,
+        findProperty("signing.password") as String?
+    )
+}
+
 
 tasks.named<Test>("jvmTest") {
     useJUnitPlatform()
 }
-
