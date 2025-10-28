@@ -6,7 +6,7 @@ plugins {
 }
 
 application {
-    mainClass.set("com.obfuscated.rpc.sample.server.ServerMainKt")
+    mainClass.set("net.tactware.kwire.sample.server.MainKt")
 }
 
 dependencies {
