@@ -5,6 +5,8 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 import kotlinx.serialization.json.Json
+import net.tactware.kwire.core.ConnectFailureReason
+import net.tactware.kwire.core.RpcConnectResult
 import net.tactware.kwire.core.RpcTransport
 import net.tactware.kwire.core.messages.*
 import org.slf4j.LoggerFactory
@@ -121,9 +123,13 @@ class WebSocketSessionTransport(
     /**
      * Connect is a no-op since we're using an existing session
      */
-    override suspend fun connect() {
+    override suspend fun connect(): RpcConnectResult {
         logger.debug("Connect called - using existing WebSocket session")
-        // No-op - we're already connected via the provided session
+        return if (isConnected) {
+            RpcConnectResult.AlreadyConnected
+        } else {
+            RpcConnectResult.Failed(ConnectFailureReason.UNKNOWN, IllegalStateException("Session is closed"))
+        }
     }
     
     /**
@@ -143,6 +149,12 @@ class WebSocketSessionTransport(
      * Send a message through the WebSocket session
      */
     override suspend fun send(message: RpcMessage) {
+        if (!isConnected) {
+            when (val result = connect()) {
+                is RpcConnectResult.Failed -> throw RuntimeException("Connect failed: ${result.reason}", result.cause)
+                else -> {}
+            }
+        }
         try {
             val messageJson = json.encodeToString(RpcMessage.serializer(), message)
             session.send(Frame.Text(messageJson))

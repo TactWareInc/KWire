@@ -15,6 +15,8 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import net.tactware.kwire.core.ConnectFailureReason
+import net.tactware.kwire.core.RpcConnectResult
 import net.tactware.kwire.core.RpcTransport
 import net.tactware.kwire.core.messages.RpcError
 import net.tactware.kwire.core.messages.RpcMessage
@@ -57,6 +59,12 @@ class KtorServerRpcTransport(
      * This is the correct signature matching RpcTransport interface.
      */
     override suspend fun send(message: RpcMessage) {
+        if (!isConnected) {
+            when (val result = connect()) {
+                is RpcConnectResult.Failed -> throw RuntimeException("Connect failed: ${result.reason}", result.cause)
+                else -> {}
+            }
+        }
         when (message) {
             is RpcRequest -> {
                 val response = handleRequest(message)
@@ -88,11 +96,12 @@ class KtorServerRpcTransport(
     /**
      * Connect to the remote endpoint.
      */
-    override suspend fun connect() {
-        if (!_isConnected) {
-            // Perform connection logic here (HTTP client setup, etc.)
-            _isConnected = true
+    override suspend fun connect(): RpcConnectResult {
+        if (_isConnected) {
+            return RpcConnectResult.AlreadyConnected
         }
+        _isConnected = true
+        return RpcConnectResult.Connected
     }
     
     /**

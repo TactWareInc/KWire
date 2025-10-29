@@ -20,8 +20,9 @@ interface RpcTransport {
     
     /**
      * Connect to the remote endpoint.
+     * Returns a result describing the outcome.
      */
-    suspend fun connect()
+    suspend fun connect(): RpcConnectResult
     
     /**
      * Disconnect from the remote endpoint.
@@ -32,6 +33,33 @@ interface RpcTransport {
      * Check if the transport is currently connected.
      */
     val isConnected: Boolean
+}
+
+/**
+ * Result of attempting to connect a transport.
+ */
+sealed class RpcConnectResult {
+    /** Successfully established a new connection. */
+    data object Connected : RpcConnectResult()
+
+    /** A connection already existed; no new connection was made. */
+    data object AlreadyConnected : RpcConnectResult()
+
+    /** The connection attempt failed with a categorized reason and optional cause. */
+    data class Failed(
+        val reason: ConnectFailureReason,
+        val cause: Throwable? = null
+    ) : RpcConnectResult()
+}
+
+/**
+ * Categories for connection failures.
+ */
+enum class ConnectFailureReason {
+    TIMEOUT,
+    UNAUTHORIZED,
+    NETWORK,
+    UNKNOWN
 }
 
 /**

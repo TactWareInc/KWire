@@ -53,70 +53,77 @@ class KtorWebSocketServerTransport(
     /**
      * Start the WebSocket server
      */
-    override suspend fun connect() {
+    override suspend fun connect(): RpcConnectResult {
         if (_isConnected) {
             logger.info("Server already connected")
-            return
+            return RpcConnectResult.AlreadyConnected
         }
         
         logger.info("Starting Ktor WebSocket Server on ${config.host}:${config.port}")
         
-        server = embeddedServer(Netty, port = config.port, host = config.host) {
-            install(WebSockets) {
-                pingPeriod = config.pingIntervalSeconds.seconds
-                timeout = config.timeoutSeconds.seconds
-                maxFrameSize = config.maxFrameSize
-                masking = false
-            }
-            
-            routing {
-                webSocket(config.path) {
-                    val connectionId = generateConnectionId()
-                    logger.info("New WebSocket connection: $connectionId")
-                    
-                    try {
-                        // Register connection
-                        activeConnections[connectionId] = this
+        return try {
+            server = embeddedServer(Netty, port = config.port, host = config.host) {
+                install(WebSockets) {
+                    pingPeriod = config.pingIntervalSeconds.seconds
+                    timeout = config.timeoutSeconds.seconds
+                    maxFrameSize = config.maxFrameSize
+                    masking = false
+                }
+                
+                routing {
+                    webSocket(config.path) {
+                        val connectionId = generateConnectionId()
+                        logger.info("New WebSocket connection: $connectionId")
                         
-                        // Handle incoming messages
-                        for (frame in incoming) {
-                            when (frame) {
-                                is Frame.Text -> {
-                                    val messageText = frame.readText()
-                                    logger.info("Received message from $connectionId: ${messageText.take(100)}...")
-                                    
-                                    try {
-                                        handleIncomingMessage(messageText, this)
-                                    } catch (e: Exception) {
-                                        logger.error("Error handling message from $connectionId: ${e.message}")
-                                        sendError(this, "unknown", "MESSAGE_PARSE_ERROR", e.message ?: "Unknown error")
+                        try {
+                            // Register connection
+                            activeConnections[connectionId] = this
+                            
+                            // Handle incoming messages
+                            for (frame in incoming) {
+                                when (frame) {
+                                    is Frame.Text -> {
+                                        val messageText = frame.readText()
+                                        logger.info("Received message from $connectionId: ${messageText.take(100)}...")
+                                        
+                                        try {
+                                            handleIncomingMessage(messageText, this)
+                                        } catch (e: Exception) {
+                                            logger.error("Error handling message from $connectionId: ${e.message}")
+                                            sendError(this, "unknown", "MESSAGE_PARSE_ERROR", e.message ?: "Unknown error")
+                                        }
+                                    }
+                                    is Frame.Close -> {
+                                        logger.info("🔌 Connection closed: $connectionId")
+                                        break
+                                    }
+                                    else -> {
+                                        logger.debug("Received non-text frame from $connectionId: ${frame.frameType}")
                                     }
                                 }
-                                is Frame.Close -> {
-                                    logger.info("🔌 Connection closed: $connectionId")
-                                    break
-                                }
-                                else -> {
-                                    logger.debug("Received non-text frame from $connectionId: ${frame.frameType}")
-                                }
                             }
+                        } catch (e: Exception) {
+                            logger.error("WebSocket connection error for $connectionId: ${e.message}")
+                        } finally {
+                            // Cleanup connection
+                            activeConnections.remove(connectionId)
+                            logger.info("Connection $connectionId cleaned up")
                         }
-                    } catch (e: Exception) {
-                        logger.error("WebSocket connection error for $connectionId: ${e.message}")
-                    } finally {
-                        // Cleanup connection
-                        activeConnections.remove(connectionId)
-                        logger.info("Connection $connectionId cleaned up")
                     }
                 }
             }
+            
+            server?.start(wait = false)
+            _isConnected = true
+            
+            logger.info("Ktor WebSocket Server started successfully")
+            logger.info("WebSocket endpoint: ws://${config.host}:${config.port}${config.path}")
+            RpcConnectResult.Connected
+        } catch (e: Exception) {
+            _isConnected = false
+            server = null
+            RpcConnectResult.Failed(ConnectFailureReason.NETWORK, e)
         }
-        
-        server?.start(wait = false)
-        _isConnected = true
-        
-        logger.info("Ktor WebSocket Server started successfully")
-        logger.info("WebSocket endpoint: ws://${config.host}:${config.port}${config.path}")
     }
     
     /**
@@ -154,7 +161,10 @@ class KtorWebSocketServerTransport(
     override suspend fun send(message: RpcMessage) {
         if (!_isConnected) {
             logger.warn("⚠️ Cannot send message - server not connected")
-            return
+            when (val result = connect()) {
+                is RpcConnectResult.Failed -> throw RuntimeException("Connect failed: ${result.reason}", result.cause)
+                else -> {}
+            }
         }
         
         val messageJson = json.encodeToString<RpcMessage>(message)

@@ -2,6 +2,8 @@ package net.tactware.kwire.ktor
 
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
+import io.ktor.client.plugins.HttpRequestRetry
+import io.ktor.client.plugins.HttpRequestTimeoutException
 import io.ktor.client.plugins.websocket.*
 import io.ktor.util.logging.*
 import io.ktor.utils.io.core.toByteArray
@@ -19,6 +21,8 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.Json
+import net.tactware.kwire.core.RpcConnectResult
+import net.tactware.kwire.core.ConnectFailureReason
 import net.tactware.kwire.core.RpcTransport
 import net.tactware.kwire.core.messages.RpcError
 import net.tactware.kwire.core.messages.RpcMessage
@@ -60,20 +64,28 @@ class KtorWebSocketClientTransport(
     /**
      * Connect to the WebSocket server
      */
-    override suspend fun connect() {
+    override suspend fun connect(): RpcConnectResult {
         if (_isConnected) {
             logger.info("🔌 Client already connected")
-            return
+            return RpcConnectResult.AlreadyConnected
         }
         
         logger.info("🚀 Connecting to WebSocket server at ${config.serverUrl}")
         
-        try {
+        return try {
             // Create HTTP client with WebSocket support
             client = HttpClient(CIO) {
                 install(WebSockets) {
                     pingInterval = config.pingIntervalSeconds.seconds
                     maxFrameSize = config.maxFrameSize
+                }
+                install(HttpRequestRetry) {
+                    retryOnExceptionIf(maxRetries = 5) { _, error ->
+                        error is HttpRequestTimeoutException
+                    }
+                    delayMillis { retry ->
+                        retry * 1000L
+                    }
                 }
             }
             
@@ -107,13 +119,15 @@ class KtorWebSocketClientTransport(
             delay(1000)
             
             if (!_isConnected) {
-                throw RuntimeException("Failed to establish WebSocket connection")
+                RpcConnectResult.Failed(ConnectFailureReason.NETWORK)
+            } else {
+                RpcConnectResult.Connected
             }
             
         } catch (e: Exception) {
             logger.error("❌ Failed to connect: ${e.message}")
             disconnect()
-            throw e
+            RpcConnectResult.Failed(ConnectFailureReason.NETWORK, e)
         }
     }
     
@@ -156,7 +170,11 @@ class KtorWebSocketClientTransport(
     override suspend fun send(message: RpcMessage) {
         if (!_isConnected || webSocketSession == null) {
             logger.warn("⚠️ Cannot send message - not connected")
-            connect()
+            delay(5000)
+            when (val result = connect()) {
+                is RpcConnectResult.Failed -> throw RuntimeException("Connect failed: ${result.reason}", result.cause)
+                else -> {}
+            }
         }
         
         try {
