@@ -156,7 +156,7 @@ class KtorWebSocketClientTransport(
     override suspend fun send(message: RpcMessage) {
         if (!_isConnected || webSocketSession == null) {
             logger.warn("⚠️ Cannot send message - not connected")
-            throw RuntimeException("Not connected to WebSocket server")
+            connect()
         }
         
         try {
@@ -324,42 +324,7 @@ class KtorWebSocketClientTransport(
     }
 }
 
-/**
- * Configuration for Ktor WebSocket client transport
- */
-data class KtorWebSocketClientConfig(
-    val serverUrl: String = "ws://localhost:8080/rpc",
-    val pingIntervalSeconds: Long = 15,
-    val maxFrameSize: Long = 1024 * 1024, // 1MB
-    val requestTimeoutMs: Long = 30_000,
-    val reconnectDelayMs: Long = 5_000,
-    val maxReconnectAttempts: Int = 3
-)
 
-/**
- * Connection statistics for the client
- */
-data class KtorWebSocketClientStats(
-    val isConnected: Boolean,
-    val serverUrl: String,
-    val connectionTime: Long? = null
-)
-
-/**
- * Builder for creating Ktor WebSocket client transport
- */
-class KtorWebSocketClientBuilder {
-    private var config = KtorWebSocketClientConfig()
-    
-    fun serverUrl(url: String) = apply { config = config.copy(serverUrl = url) }
-    fun pingInterval(seconds: Long) = apply { config = config.copy(pingIntervalSeconds = seconds) }
-    fun maxFrameSize(bytes: Long) = apply { config = config.copy(maxFrameSize = bytes) }
-    fun requestTimeout(ms: Long) = apply { config = config.copy(requestTimeoutMs = ms) }
-    fun reconnectDelay(ms: Long) = apply { config = config.copy(reconnectDelayMs = ms) }
-    fun maxReconnectAttempts(attempts: Int) = apply { config = config.copy(maxReconnectAttempts = attempts) }
-    
-    fun build(scope : CoroutineScope): KtorWebSocketClientTransport = KtorWebSocketClientTransport(config, scope)
-}
 
 /**
  * DSL function for creating Ktor WebSocket client transport

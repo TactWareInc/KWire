@@ -229,17 +229,6 @@ class WebSocketSessionTransport(
     }
 }
 
-/**
- * Configuration for WebSocket transport
- */
-data class WebSocketTransportConfig(
-    val json: Json = Json {
-        ignoreUnknownKeys = true
-        isLenient = true
-        encodeDefaults = true
-    },
-    val bufferSize: Int = Channel.UNLIMITED
-)
 
 /**
  * Extension function to create a transport from a WebSocketSession

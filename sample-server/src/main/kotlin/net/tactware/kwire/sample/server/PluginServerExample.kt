@@ -7,8 +7,8 @@ import io.ktor.server.netty.*
 import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import net.tactware.kwire.ktor.KWireRpc
-import net.tactware.kwire.ktor.withGeneratedServer
+import net.tactware.kwire.ktor.plugin.KWireRpc
+import net.tactware.kwire.ktor.plugin.withGeneratedServer
 import net.tactware.kwire.sample.api.UserService
 import kotlin.time.Duration.Companion.seconds
 

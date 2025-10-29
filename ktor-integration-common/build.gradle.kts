@@ -22,7 +22,6 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 api(project(":core"))
-                api(project(":ktor-integration-common"))
 
                 // Ktor dependencies
                 implementation(libs.ktor.client.core)
@@ -74,7 +73,7 @@ mavenPublishing {
     signAllPublications()
 
     // Configure project coordinates
-    coordinates(rootProject.group as String, "ktor-integration-common", rootProject.version as String)
+    coordinates(rootProject.group as String, "ktor-integration-client", rootProject.version as String)
 
     // Configure POM metadata
     pom {

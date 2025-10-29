@@ -1,13 +1,15 @@
-package net.tactware.kwire.ktor
+package net.tactware.kwire.ktor.plugin
 
 import io.ktor.server.application.*
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import io.ktor.util.*
 import io.ktor.websocket.*
-import kotlinx.coroutines.*
 import kotlinx.serialization.json.Json
 import net.tactware.kwire.core.RpcTransport
+import net.tactware.kwire.ktor.WebSocketSessionTransport
+import net.tactware.kwire.ktor.WebSocketTransportConfig
+import net.tactware.kwire.ktor.generateConnectionId
 import org.slf4j.LoggerFactory
 import kotlin.reflect.KClass
 import kotlin.time.Duration
@@ -235,54 +237,6 @@ class KWireRpc(configuration: Configuration) {
             }
         }
     }
-}
-
-/**
- * Service configuration
- */
-class ServiceConfiguration<T : Any>(
-    val path: String,
-    val serviceClass: KClass<T>
-) {
-    internal lateinit var implementationFactory: () -> T
-    internal var serverFactory: ((RpcTransport, T) -> Any)? = null
-    var useGeneratedServer: Boolean = false
-    var requireAuth: Boolean = false
-    var customConfig: Any? = null
-    
-    /**
-     * Set the implementation factory
-     */
-    fun implementation(factory: () -> T) {
-        implementationFactory = factory
-    }
-    
-    /**
-     * Set the server factory for generated servers
-     */
-    fun generatedServer(factory: (RpcTransport, T) -> Any) {
-        serverFactory = factory
-        useGeneratedServer = true
-    }
-}
-
-/**
- * WebSocket configuration
- */
-class WebSocketConfig {
-    var pingPeriod: Duration = 15.seconds
-    var timeout: Duration = 60.seconds
-    var maxFrameSize: Long = 1024 * 1024 // 1MB
-}
-
-/**
- * JSON configuration
- */
-class JsonConfig {
-    var ignoreUnknownKeys: Boolean = true
-    var isLenient: Boolean = true
-    var encodeDefaults: Boolean = true
-    var prettyPrint: Boolean = false
 }
 
 /**
