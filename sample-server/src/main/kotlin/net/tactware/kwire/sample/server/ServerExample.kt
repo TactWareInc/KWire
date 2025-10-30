@@ -1,12 +1,15 @@
 package net.tactware.kwire.sample.server
 
-import io.ktor.http.*
-import io.ktor.server.application.*
-import io.ktor.server.engine.*
-import io.ktor.server.netty.*
-import io.ktor.server.plugins.cors.routing.*
-import io.ktor.server.response.*
-import io.ktor.server.routing.*
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpMethod
+import io.ktor.http.HttpStatusCode
+import io.ktor.server.application.install
+import io.ktor.server.engine.embeddedServer
+import io.ktor.server.netty.Netty
+import io.ktor.server.plugins.cors.routing.CORS
+import io.ktor.server.response.respondText
+import io.ktor.server.routing.get
+import io.ktor.server.routing.routing
 import net.tactware.kwire.ktor.plugin.KWireRpc
 import net.tactware.kwire.ktor.plugin.withGeneratedServer
 import net.tactware.kwire.sample.api.UserService
@@ -160,21 +163,7 @@ fun productionConfiguration() {
                     )
                 }
             }
-            
-            // Admin service (would require auth)
-            // service<AdminService>("/api/v1/admin") {
-            //     implementation { container.getAdminService() }
-            //     requireAuth = true // Protected endpoint
-            //     withGeneratedServer { transport, impl ->
-            //         AdminServiceServerImpl(transport, impl)
-            //     }
-            // }
         }
-        
-        // Add authentication, monitoring, etc.
-        // install(Authentication) { ... }
-        // install(CallLogging) { ... }
-        // install(ContentNegotiation) { ... }
         
     }.start(wait = true)
 }

@@ -1,19 +1,24 @@
 package net.tactware.kwire.ktor.plugin
 
-import io.ktor.server.application.*
-import io.ktor.server.routing.*
-import io.ktor.server.websocket.*
-import io.ktor.util.*
-import io.ktor.websocket.*
+import io.ktor.server.application.Application
+import io.ktor.server.application.BaseApplicationPlugin
+import io.ktor.server.application.install
+import io.ktor.server.application.pluginOrNull
+import io.ktor.server.routing.Route
+import io.ktor.server.routing.routing
+import io.ktor.server.websocket.WebSockets
+import io.ktor.server.websocket.pingPeriod
+import io.ktor.server.websocket.timeout
+import io.ktor.server.websocket.webSocket
+import io.ktor.util.AttributeKey
+import io.ktor.websocket.Frame
+import io.ktor.websocket.WebSocketSession
+import io.ktor.websocket.readText
 import kotlinx.serialization.json.Json
 import net.tactware.kwire.core.RpcTransport
 import net.tactware.kwire.ktor.WebSocketSessionTransport
 import net.tactware.kwire.ktor.WebSocketTransportConfig
-import net.tactware.kwire.ktor.generateConnectionId
 import org.slf4j.LoggerFactory
-import kotlin.reflect.KClass
-import kotlin.time.Duration
-import kotlin.time.Duration.Companion.seconds
 
 /**
  * KWire RPC Plugin for Ktor.
@@ -246,4 +251,11 @@ inline fun <reified T : Any> ServiceConfiguration<T>.withGeneratedServer(
     crossinline serverFactory: (RpcTransport, T) -> Any
 ) {
     generatedServer { transport, impl -> serverFactory(transport, impl) }
+}
+
+/**
+ * Generate a unique connection ID
+ */
+fun generateConnectionId(): String {
+    return "conn_${System.currentTimeMillis()}_${(1000..9999).random()}"
 }

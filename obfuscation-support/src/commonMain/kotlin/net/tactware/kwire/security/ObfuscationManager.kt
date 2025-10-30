@@ -1,7 +1,7 @@
 package net.tactware.kwire.security
 
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 /**
  * Central manager for RPC obfuscation operations.

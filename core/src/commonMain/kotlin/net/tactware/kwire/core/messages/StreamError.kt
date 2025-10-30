@@ -1,7 +1,7 @@
 package net.tactware.kwire.core.messages
 
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.Contextual
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 
 /**

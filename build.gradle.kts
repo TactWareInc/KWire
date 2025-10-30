@@ -1,4 +1,4 @@
-import java.util.Properties
+import java.util.*
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform) apply false
@@ -16,7 +16,7 @@ val localProperties: Properties by lazy {
 }
 
 group = "net.tactware.kwire"
-version = "1.0.4"
+version = "1.0.8"
 
 allprojects {
 

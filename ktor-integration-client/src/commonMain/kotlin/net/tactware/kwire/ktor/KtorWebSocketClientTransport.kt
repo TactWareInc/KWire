@@ -1,13 +1,20 @@
 package net.tactware.kwire.ktor
 
-import io.ktor.client.*
-import io.ktor.client.engine.cio.*
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.HttpRequestRetry
 import io.ktor.client.plugins.HttpRequestTimeoutException
-import io.ktor.client.plugins.websocket.*
-import io.ktor.util.logging.*
+import io.ktor.client.plugins.websocket.DefaultClientWebSocketSession
+import io.ktor.client.plugins.websocket.WebSockets
+import io.ktor.client.plugins.websocket.pingInterval
+import io.ktor.client.plugins.websocket.webSocket
+import io.ktor.util.logging.KtorSimpleLogger
 import io.ktor.utils.io.core.toByteArray
-import io.ktor.websocket.*
+import io.ktor.websocket.CloseReason
+import io.ktor.websocket.Frame
+import io.ktor.websocket.close
+import io.ktor.websocket.readReason
+import io.ktor.websocket.readText
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -20,9 +27,10 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
+import kotlinx.datetime.Clock
 import kotlinx.serialization.json.Json
-import net.tactware.kwire.core.RpcConnectResult
 import net.tactware.kwire.core.ConnectFailureReason
+import net.tactware.kwire.core.RpcConnectResult
 import net.tactware.kwire.core.RpcTransport
 import net.tactware.kwire.core.messages.RpcError
 import net.tactware.kwire.core.messages.RpcMessage
@@ -32,7 +40,6 @@ import net.tactware.kwire.core.messages.StreamData
 import net.tactware.kwire.core.messages.StreamEnd
 import net.tactware.kwire.core.messages.StreamError
 import net.tactware.kwire.core.messages.StreamStart
-import kotlinx.datetime.Clock
 import kotlin.time.Duration.Companion.seconds
 
 /**
@@ -81,7 +88,7 @@ class KtorWebSocketClientTransport(
                 }
                 install(HttpRequestRetry) {
                     retryOnExceptionIf(maxRetries = 5) { _, error ->
-                        error is HttpRequestTimeoutException
+                        error is HttpRequestTimeoutException || error is ClientConnectionException
                     }
                     delayMillis { retry ->
                         retry * 1000L
@@ -169,12 +176,8 @@ class KtorWebSocketClientTransport(
      */
     override suspend fun send(message: RpcMessage) {
         if (!_isConnected || webSocketSession == null) {
-            logger.warn("⚠️ Cannot send message - not connected")
-            delay(5000)
-            when (val result = connect()) {
-                is RpcConnectResult.Failed -> throw RuntimeException("Connect failed: ${result.reason}", result.cause)
-                else -> {}
-            }
+            logger.warn("⚠️ Not connected; attempting graceful reconnect before send…")
+            ensureConnectedWithRetry()
         }
         
         try {
@@ -252,6 +255,31 @@ class KtorWebSocketClientTransport(
         disconnect()
         delay(config.reconnectDelayMs)
         connect()
+    }
+
+    private suspend fun ensureConnectedWithRetry() {
+        if (_isConnected && webSocketSession != null) return
+        val maxAttempts = config.maxReconnectAttempts.coerceAtLeast(1)
+        var attempt = 0
+        while (attempt < maxAttempts && (!_isConnected || webSocketSession == null)) {
+            attempt++
+            logger.info("🔄 Connect attempt $attempt/$maxAttempts…")
+            when (connect()) {
+                RpcConnectResult.Connected, RpcConnectResult.AlreadyConnected -> {
+                    if (_isConnected && webSocketSession != null) return
+                }
+                is RpcConnectResult.Failed -> {
+                    // Fall through to delay and retry
+                }
+            }
+            if (!_isConnected || webSocketSession == null) {
+                delay(config.reconnectDelayMs)
+            }
+        }
+        if (!_isConnected || webSocketSession == null) {
+            logger.error("❌ Unable to establish connection after $maxAttempts attempts")
+            throw ClientConnectionException()
+        }
     }
     
     /**

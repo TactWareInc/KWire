@@ -2,9 +2,9 @@
 
 [![Maven Central](https://img.shields.io/maven-central/v/net.tactware.kwire/core.svg?label=Maven%20Central)](https://central.sonatype.com/namespace/net.tactware.kwire)
 
-KWire is a Kotlin Multiplatform RPC toolkit with  Ktor integration, kotlinx.serialization, and optional obfuscation. It provides a small set of core message types, a pluggable transport abstraction, a Gradle plugin for client/server stub generation, and production-ready WebSocket transports for Ktor.
+KWire is a Kotlin Multiplatform RPC toolkit with Ktor integration, kotlinx.serialization, and optional obfuscation. It provides a small set of core message types, a pluggable client transport, a native Ktor server plugin for service registration, optional code generation support, and runnable samples.
 
-This repository contains the core library, integration modules, an obfuscation-support module, a Gradle plugin, and runnable samples for a UserService over WebSockets.
+This repository contains the core library, Ktor integration (client and server plugin), an obfuscation-support module, and runnable samples for a `UserService` over WebSockets.
 
 
 ## Contents
@@ -14,8 +14,7 @@ This repository contains the core library, integration modules, an obfuscation-s
 - Modules
 - Quick start
 - Running the samples
-- Gradle plugin (code generation)
-- Ktor transports
+- Ktor integration (client and server)
 - Obfuscation support
 - Development (build/test)
 - Troubleshooting
@@ -24,47 +23,50 @@ This repository contains the core library, integration modules, an obfuscation-s
 
 ## What is KWire
 KWire helps you define RPC service interfaces in Kotlin and call them across process/network boundaries. You can:
-- Declare a service interface annotated with @RpcService and @RpcMethod
-- Generate client/server stubs via a Gradle plugin (or wire manually)
-- Communicate over pluggable transports (Ktor WebSockets provided)
-- Stream values using Kotlin Flow
+- Declare a service interface annotated with `@RpcService` and `@RpcMethod`
+- Use the native Ktor server plugin to expose services over WebSockets
+- Use the provided Ktor WebSocket client transport
+- Optionally generate client/server stubs via a Gradle plugin
+- Stream values using Kotlin `Flow`
 - Optionally obfuscate service/method identifiers
 
 
 ## Features
 - Kotlin Multiplatform core (common code, Kotlinx Serialization)
-- Ktor WebSocket client/server transports
+- Ktor WebSocket client transport
+- Native Ktor server plugin (register multiple services/endpoints)
 - Type-safe service interfaces via annotations
 - Streaming with Flow, request/response messaging
 - Optional obfuscation mapping/validation at runtime
-- Gradle plugin for stub generation
-- Runnable production-style samples (UserService)
+- Optional Gradle plugin for stub generation
+- Runnable production-style samples (`UserService`)
 
 
 ## Architecture overview
-- core: message types (RpcRequest/RpcResponse/Stream*), errors, and RpcTransport interface plus service annotations.
-- transport: implementations of RpcTransport. This repo includes Ktor WebSocket client/server.
-- codegen: a Gradle plugin that can scan interfaces and emit client/server shims.
-- obfuscation-support: keeps mappings between public names and obfuscated ids for services/methods.
-- samples: minimal UserService API and implementations that run over Ktor WebSockets.
+- `core`: message types (`RpcRequest`/`RpcResponse`/`Stream*`), errors, and `RpcTransport` plus service annotations
+- `ktor-integration-client`: Ktor WebSocket client transport
+- `ktor-integration-server`: Native Ktor plugin to expose services over WebSockets
+- `ktor-integration-common`: Shared Ktor integration utilities
+- `obfuscation-support`: Maps obfuscated ids to service/method names
+- `samples`: minimal `UserService` API and runnable client/server examples
 
 
 ## Modules
-- core/ — Core abstractions and messages
-  - net.tactware.kwire.core.RpcService, RpcMethod, RpcClient, RpcServer annotations
-  - net.tactware.kwire.core.messages.* (RpcRequest, RpcResponse, StreamData, StreamEnd, etc.)
-  - net.tactware.kwire.core.RpcTransport interface
-- ktor-integration-client/ — Ktor WebSocket client transport
-  - net.tactware.kwire.ktor.KtorWebSocketClientTransport
-  - Convenience factory: ktorWebSocketClientTransport { ... }
-- ktor-integration-server/ — Ktor WebSocket server transport
-  - net.tactware.kwire.ktor.KtorWebSocketServerTransport
-  - Convenience factory: ktorWebSocketServerTransport { ... }
-- obfuscation-support/ — Obfuscation mapping and validation utilities
-- gradle-plugin/ — Obfuscated RPC gradle plugin and tasks (e.g., generateRpcStubs)
-- sample-api/ — Sample shared API (UserService, DTOs)
-- sample-server/ — Runnable server example using Ktor WebSockets and manual dispatch
-- sample-client/ — Runnable client example using Ktor WebSockets
+- `core/` — Core abstractions and messages
+  - `net.tactware.kwire.core.RpcService`, `RpcMethod` annotations
+  - `net.tactware.kwire.core.messages.*` (`RpcRequest`, `RpcResponse`, `StreamData`, `StreamEnd`, etc.)
+  - `net.tactware.kwire.core.RpcTransport` interface
+- `ktor-integration-client/` — Ktor WebSocket client transport
+  - `net.tactware.kwire.ktor.KtorWebSocketClientTransport`
+  - Convenience factory: `ktorWebSocketClientTransport { ... }`
+- `ktor-integration-server/` — Ktor server plugin to expose RPC services
+  - Install `KWireRpc` and register services with paths
+  - Helper: `withGeneratedServer { transport, impl -> ... }`
+- `ktor-integration-common/` — Shared Ktor integration utilities
+- `obfuscation-support/` — Obfuscation mapping and validation utilities
+- `sample-api/` — Sample shared API (`UserService`, DTOs)
+- `sample-server/` — Runnable server example using the Ktor plugin
+- `sample-client/` — Runnable client example using the Ktor client transport
 
 
 ## Quick start
@@ -84,130 +86,103 @@ interface UserService {
 }
 ```
 
-2) Choose how to connect:
-- Manual dispatch (as the samples do) by handling RpcRequest/StreamStart yourself
-- Or enable the Gradle plugin to generate client/server shims
+2) Expose the service on the server via the Ktor plugin:
 
-3) Use the provided Ktor WebSocket transports to connect client to server.
+```kotlin
+install(KWireRpc) {
+    service<UserService>("/users") {
+        implementation { UserServiceImpl() }
+        withGeneratedServer { transport, impl ->
+            UserServiceServerImpl(transport, impl)
+        }
+    }
+}
+```
+
+3) Connect from the client using the provided Ktor WebSocket transport:
+
+```kotlin
+val transport = ktorWebSocketClientTransport(scope) {
+    serverUrl("ws://localhost:8082/users")
+}
+val client = UserServiceClientImpl(transport)
+```
 
 
 ## Running the samples
-The samples show a production-style WebSocket setup with manual method dispatch (so you can run without codegen).
+The samples show a production-style WebSocket setup using the native Ktor plugin on the server and the Ktor client transport.
 
 - Server entry point:
-  - sample-server/src/main/kotlin/net/tactware/kwire/sample/server/ProductionServerMain.kt
-  - Starts a Ktor WebSocket server (default ws://0.0.0.0:8082/rpc in code)
+  - `sample-server/src/main/kotlin/net/tactware/kwire/sample/server/ServerExample.kt` (object `PluginServerExample`)
+  - Starts a Ktor WebSocket server (default `ws://0.0.0.0:8082/users`)
 
 - Client entry point:
-  - sample-client/src/main/kotlin/net/tactware/kwire/sample/client/ProductionClientMain.kt
-  - Connects to ws://localhost:8082/rpc and demonstrates request/response and streaming
+  - `sample-client/src/main/kotlin/net/tactware/kwire/sample/client/ClientExample.kt`
+  - Connects to `ws://localhost:8082/users` and demonstrates request/response and streaming
 
 Ways to run:
-- In IDE: Run ProductionServerMain first, then ProductionClientMain
+- In IDE: Run the server first (`PluginServerExample`), then `ClientExample`
 - Via Gradle (if application main class is configured in your environment):
-  - ./gradlew :sample-server:run
-  - ./gradlew :sample-client:run
-
-Note: If run tasks fail due to mismatched mainClass, open the sample modules in your IDE and run the ProductionMain files directly. The code does not depend on codegen to run.
+  - `./gradlew :sample-server:run`
+  - `./gradlew :sample-client:run`
 
 
-## Gradle plugin (code generation)
-The Gradle plugin (id: net.tactware.kwire.gradle) can generate RPC client and server stubs from your annotated interfaces.
+## Ktor integration (client and server)
+- Client: `net.tactware.kwire.ktor.KtorWebSocketClientTransport`
+  - Configure via builder: `ktorWebSocketClientTransport(scope) { serverUrl("ws://localhost:8082/users"); pingInterval(15); requestTimeout(30000) }`
 
-Apply via plugins block (direct):
-```kotlin
-plugins {
-    id("net.tactware.kwire.gradle") version "1.0.1"
-}
-```
-
-Or via Version Catalog (libs.versions.toml):
-```toml
-[plugins]
-kwire-plugin = { id = "net.tactware.kwire.gradle", version = "1.0.1" }
-```
-Then in build.gradle.kts:
-```kotlin
-plugins {
-    alias(libs.plugins.kwire.plugin)
-}
-
-obfuscatedRpc {
-    // where to scan service interfaces
-    apiSourcePath = "../sample-api/src/main/kotlin"
-
-    // where to output/generated client/server source
-    clientSourcePath = "src/main/kotlin"      // optional
-    serverSourcePath = "src/main/kotlin"
-
-    // optional flags
-    obfuscationEnabled = true
-    generateClient = true
-    generateServer = true
-}
-```
-
-The plugin registers a generateRpcStubs task and wires it to compileKotlin. Generated sources are added to the main source set under build/generated/rpc.
+- Server: native Ktor plugin `KWireRpc`
+  - Install and register services with paths; optionally use generated servers via `withGeneratedServer { transport, impl -> ... }`
+  - See detailed guide in `ktor-integration-server/README.md` and `ktor-integration-server/PLUGIN_README.md`
 
 
-## Ktor transports
-- Client: net.tactware.kwire.ktor.KtorWebSocketClientTransport
-  - Configure via builder: ktorWebSocketClientTransport(scope) { serverUrl("ws://localhost:8082/rpc"); pingInterval(15); requestTimeout(30000) }
-- Server: net.tactware.kwire.ktor.KtorWebSocketServerTransport
-  - Configure via builder: ktorWebSocketServerTransport { host("0.0.0.0"); port(8082); path("/rpc") }
-
-Each transport implements net.tactware.kwire.core.RpcTransport with:
-- suspend fun connect()/disconnect()
-- val isConnected: Boolean
-- suspend fun send(message: RpcMessage)
-- fun receive(): Flow<RpcMessage>
-
-For manual wiring, you can set request/stream handlers on the server transport and send/collect messages on the client transport as shown in the sample Production*Main files.
+Each transport implements `net.tactware.kwire.core.RpcTransport` with:
+- `suspend fun connect()/disconnect()`
+- `val isConnected: Boolean`
+- `suspend fun send(message: RpcMessage)`
+- `fun receive(): Flow<RpcMessage>`
 
 
 ## Obfuscation support
-The obfuscation-support module includes:
-- ObfuscationManager and related classes to map obfuscated identifiers to original names
+The `obfuscation-support` module includes:
+- `ObfuscationManager` and related classes to map obfuscated identifiers to original names
 - Strategies/utilities to control how method/service identifiers are resolved
 
-When enabled, requests carry an obfuscated methodId, which is resolved at runtime by the server.
+When enabled, requests carry an obfuscated `methodId`, which is resolved at runtime by the server.
 
 
 ## Development (build/test)
-- Build all modules: ./gradlew build
-- Run tests: ./gradlew test
+- Build all modules: `./gradlew build`
+- Run tests: `./gradlew test`
 - Open the project in IntelliJ IDEA for best Kotlin Multiplatform support.
 
-Kotlin/Gradle versions are controlled from gradle/libs.versions.toml and gradle.properties.
+Kotlin/Gradle versions are controlled from `gradle/libs.versions.toml` and `gradle.properties`.
 
 
 ## Troubleshooting
-- WebSocket connection refused:
-  - Ensure the server is running and listening at the same URL the client uses (default ws://localhost:8082/rpc in the samples).
-- No responses arriving:
-  - Check server logs; verify manual dispatch handlers are set for the correct service/method ids.
-- Gradle run task fails in samples:
-  - Run ProductionServerMain and ProductionClientMain directly from your IDE if mainClass isn’t aligned.
-- Serialization errors:
-  - Ensure DTOs are @Serializable and the same version of kotlinx.serialization is used across modules.
+- **WebSocket connection refused**:
+  - Ensure the server is running and listening at the same URL the client uses (default `ws://localhost:8082/users` in the samples).
+- **No responses arriving**:
+  - Check server logs; verify the service is registered at the expected path and that generated server/dispatcher is started.
+- **Gradle run task fails in samples**:
+  - Run the `PluginServerExample` and `ClientExample` mains directly from your IDE if `mainClass` isn’t aligned.
+- **Serialization errors**:
+  - Ensure DTOs are `@Serializable` and the same version of kotlinx.serialization is used across modules.
 
 
 ## Documentation
-Additional guides and reference live in the docs/ directory:
-- docs/README.md — High-level documentation (generic template)
-- docs/getting-started.md — Step-by-step guide
-- docs/api-reference.md — Conceptual API reference
-
-These documents are generic in places; the module and package names in this README reflect the KWire code in this repository.
+Module-specific guides:
+- `ktor-integration-server/README.md` — Ktor server integration overview
+- `ktor-integration-server/PLUGIN_README.md` — Ktor plugin usage and configuration
 
 
 ## License
 Unless otherwise specified in the repository, this project is provided under the license declared in the repository root or headers (add your license text or file reference here).
 
 ## Local credentials (local.properties)
-To keep secrets out of gradle.properties, the build now reads publishing/signing credentials from a local.properties file at the project root (if present), then falls back to gradle.properties, then environment variables.
+To keep secrets out of `gradle.properties`, the build reads publishing/signing credentials from a `local.properties` file at the project root (if present), then falls back to `gradle.properties`, then environment variables.
 
-Add a local.properties with the following keys (do not commit this file):
+Add a `local.properties` with the following keys (do not commit this file):
 
 ```
 ossrhUsername=your-sonatype-username
@@ -218,6 +193,6 @@ signing.password=your-key-passphrase
 ```
 
 Notes:
-- local.properties should be excluded from version control (it is commonly ignored by default; ensure your VCS ignores it).
-- These values are used only for the modules published to Maven Central: core, ktor-integration-client, ktor-integration-server.
-- Environment variable fallbacks are still supported: OSSRH_USERNAME, OSSRH_PASSWORD, SIGNING_KEY, SIGNING_PASSWORD.
+- `local.properties` should be excluded from version control (it is commonly ignored by default; ensure your VCS ignores it).
+- These values are used only for the modules published to Maven Central: `core`, `ktor-integration-client`, `ktor-integration-server`.
+- Environment variable fallbacks are still supported: `OSSRH_USERNAME`, `OSSRH_PASSWORD`, `SIGNING_KEY`, `SIGNING_PASSWORD`.
