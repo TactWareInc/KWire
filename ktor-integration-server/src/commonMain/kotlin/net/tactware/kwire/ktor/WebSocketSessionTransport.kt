@@ -97,11 +97,11 @@ class WebSocketSessionTransport(
                         // Also handle directly if handlers are set
                         when (message) {
                             is RpcRequest -> {
-                                logger.info("Handling RPC request: ${message.serviceName}.${message.methodId}")
+                                logger.debug("Handling RPC request: ${message.serviceName}.${message.methodId}")
                                 requestHandler?.invoke(message)
                             }
                             is StreamStart -> {
-                                logger.info("Handling stream start: ${message.serviceName}.${message.methodId}")
+                                logger.debug("Handling stream start: ${message.serviceName}.${message.methodId}")
                                 streamHandler?.invoke(message)
                             }
                             else -> {
@@ -152,7 +152,7 @@ class WebSocketSessionTransport(
      * Disconnect closes the WebSocket session
      */
     override suspend fun disconnect() {
-        logger.info("Disconnecting WebSocket session")
+        logger.debug("Disconnecting WebSocket session")
         try {
             session.close(CloseReason(CloseReason.Codes.GOING_AWAY, "Transport disconnecting"))
         } catch (e: Exception) {
