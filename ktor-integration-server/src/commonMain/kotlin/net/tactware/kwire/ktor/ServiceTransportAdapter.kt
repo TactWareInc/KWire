@@ -42,7 +42,7 @@ class ServiceTransportAdapter<T : Any>(
     }
     
     private suspend fun handleRequest(request: RpcRequest) {
-        logger.debug("Processing request: ${request.serviceName}.${request.methodId}")
+        logger.trace("Processing request: ${request.serviceName}.${request.methodId}")
         
         // NOTE: This is a basic implementation that doesn't actually invoke methods
         // In production, you would either:
@@ -64,7 +64,7 @@ class ServiceTransportAdapter<T : Any>(
     }
     
     private suspend fun handleStreamStart(streamStart: StreamStart) {
-        logger.debug("Processing stream: ${streamStart.serviceName}.${streamStart.methodId}")
+        logger.trace("Processing stream: ${streamStart.serviceName}.${streamStart.methodId}")
         
         // Handle streaming - in a real implementation this would
         // invoke the streaming method and send data

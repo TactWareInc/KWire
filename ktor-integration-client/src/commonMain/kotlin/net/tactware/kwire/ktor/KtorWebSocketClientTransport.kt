@@ -8,7 +8,7 @@ import io.ktor.client.plugins.websocket.DefaultClientWebSocketSession
 import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.client.plugins.websocket.pingInterval
 import io.ktor.client.plugins.websocket.webSocket
-import org.slf4j.LoggerFactory
+import net.tactware.kwire.ktor.logging.createLogger
 import io.ktor.utils.io.core.toByteArray
 import io.ktor.websocket.CloseReason
 import io.ktor.websocket.Frame
@@ -22,7 +22,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterIsInstance
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
@@ -51,7 +50,7 @@ class KtorWebSocketClientTransport(
     private val scope : CoroutineScope
 ) : RpcTransport {
 
-    private val logger = LoggerFactory.getLogger("KtorWebSocketClientTransport")
+    private val logger = createLogger("KtorWebSocketClientTransport")
     private val json = Json {
         ignoreUnknownKeys = true
         isLenient = true
@@ -66,6 +65,7 @@ class KtorWebSocketClientTransport(
     
     // Message handling
     private val messageChannel = Channel<RpcMessage>(Channel.UNLIMITED)
+    private val pendingResponses = PendingResponseRegistry()
     private var connectionJob: Job? = null
     
     /**
@@ -73,11 +73,11 @@ class KtorWebSocketClientTransport(
      */
     override suspend fun connect(): RpcConnectResult {
         if (_isConnected) {
-            logger.debug("🔌 Client already connected")
+            logger.trace("🔌 Client already connected")
             return RpcConnectResult.AlreadyConnected
         }
         
-        logger.debug("🚀 Connecting to WebSocket server at {}", config.serverUrl)
+        logger.trace("🚀 Connecting to WebSocket server at {}", config.serverUrl)
         
         return try {
             // Create HTTP client with WebSocket support
@@ -106,17 +106,19 @@ class KtorWebSocketClientTransport(
                         _isConnected = true
                         
                         logger.info("✅ Connected to WebSocket server")
-                        logger.debug("🌐 Connected to: {}", config.serverUrl)
+                        logger.trace("🌐 Connected to: {}", config.serverUrl)
                         
                         // Start message handling
                         handleIncomingMessages()
                     }
                 } catch (e: Exception) {
                     logger.error("❌ WebSocket connection failed", e)
+                    failPendingResponses(e)
                     _isConnected = false
                     webSocketSession = null
                 } finally {
                     logger.info("🔌 WebSocket connection closed")
+                    failPendingResponses(ClientConnectionException())
                     _isConnected = false
                     webSocketSession = null
                 }
@@ -146,7 +148,7 @@ class KtorWebSocketClientTransport(
             return
         }
         
-        logger.debug("🛑 Disconnecting from WebSocket server...")
+        logger.trace("🛑 Disconnecting from WebSocket server...")
         
         try {
             // Close WebSocket session
@@ -162,6 +164,7 @@ class KtorWebSocketClientTransport(
             client = null
             
             _isConnected = false
+            failPendingResponses(ClientConnectionException())
             messageChannel.close()
             
             logger.info("✅ Disconnected from WebSocket server")
@@ -184,9 +187,9 @@ class KtorWebSocketClientTransport(
             val messageJson = json.encodeToString<RpcMessage>(message)
             webSocketSession!!.send(Frame.Text(messageJson))
             
-            logger.debug("📤 Sent message: {} ({})", message::class.simpleName, message.messageId)
+            logger.trace("📤 Sent message: {} ({})", message::class.simpleName, message.messageId)
             if (logger.isDebugEnabled) {
-                logger.debug("📤 Message content: {}...", messageJson.take(200))
+                logger.trace("📤 Message content: {}...", messageJson.take(200))
             }
             
         } catch (e: Exception) {
@@ -206,13 +209,17 @@ class KtorWebSocketClientTransport(
      * Send RPC request and wait for response
      */
     suspend fun sendRequest(request: RpcRequest): RpcResponse {
-        send(request)
-        
-        // Wait for response with timeout
-        return withTimeout(config.requestTimeoutMs) {
-            receive()
-                .filterIsInstance<RpcResponse>()
-                .first { it.messageId == request.messageId }
+        val responseDeferred = pendingResponses.register(request.messageId)
+
+        try {
+            send(request)
+
+            // Wait for matching response with timeout.
+            return withTimeout(config.requestTimeoutMs) {
+                responseDeferred.await()
+            }
+        } finally {
+            pendingResponses.remove(request.messageId)
         }
     }
     
@@ -253,7 +260,7 @@ class KtorWebSocketClientTransport(
      * Reconnect to the server
      */
     suspend fun reconnect() {
-        logger.debug("🔄 Reconnecting to WebSocket server...")
+        logger.trace("🔄 Reconnecting to WebSocket server...")
         disconnect()
         delay(config.reconnectDelayMs)
         connect()
@@ -265,7 +272,7 @@ class KtorWebSocketClientTransport(
         var attempt = 0
         while (attempt < maxAttempts && (!_isConnected || webSocketSession == null)) {
             attempt++
-            logger.debug("🔄 Connect attempt {}/{}…", attempt, maxAttempts)
+            logger.trace("🔄 Connect attempt {}/{}…", attempt, maxAttempts)
             when (connect()) {
                 RpcConnectResult.Connected, RpcConnectResult.AlreadyConnected -> {
                     if (_isConnected && webSocketSession != null) return
@@ -279,7 +286,7 @@ class KtorWebSocketClientTransport(
             }
         }
         if (!_isConnected || webSocketSession == null) {
-            logger.error("❌ Unable to establish connection after {} attempts", maxAttempts)
+            logger.error("❌ Unable to establish connection after {} attempts")
             throw ClientConnectionException()
         }
     }
@@ -304,19 +311,22 @@ class KtorWebSocketClientTransport(
                     is Frame.Text -> {
                         val messageText = frame.readText()
                         if (logger.isDebugEnabled) {
-                            logger.debug("📨 Received message: {}...", messageText.take(100))
+                            logger.trace("📨 Received message: {}...", messageText.take(100))
                         }
                         
                         try {
                             val message = parseIncomingMessage(messageText)
+                            if (message is RpcResponse) {
+                                pendingResponses.complete(message)
+                            }
                             messageChannel.send(message)
                             
-                            logger.debug("📨 Parsed message: {} ({})", message::class.simpleName, message.messageId)
+                            logger.trace("📨 Parsed message: {} ({})", message::class.simpleName, message.messageId)
                             
                         } catch (e: Exception) {
                             logger.error("❌ Error parsing message", e)
                             if (logger.isDebugEnabled) {
-                                logger.debug("❌ Raw message: {}", messageText)
+                                logger.trace("❌ Raw message: {}", messageText)
                             }
                         }
                     }
@@ -326,16 +336,20 @@ class KtorWebSocketClientTransport(
                         break
                     }
                     is Frame.Pong -> {
-                        logger.debug("🏓 Received pong from server")
+                        logger.trace("🏓 Received pong from server")
                     }
                     else -> {
-                        logger.debug("📨 Received non-text frame: {}", frame.frameType)
+                        logger.trace("📨 Received non-text frame: {}", frame.frameType)
                     }
                 }
             }
         } catch (e: Exception) {
             logger.error("❌ Error handling incoming messages", e)
         }
+    }
+
+    private suspend fun failPendingResponses(cause: Throwable) {
+        pendingResponses.failAll(cause)
     }
     
     private fun parseIncomingMessage(messageText: String): RpcMessage {
@@ -371,7 +385,7 @@ class KtorWebSocketClientTransport(
         } catch (e: Exception) {
             logger.error("❌ Failed to parse message", e)
             if (logger.isDebugEnabled) {
-                logger.debug("❌ Message content: {}", messageText)
+                logger.trace("❌ Message content: {}", messageText)
             }
             throw e
         }

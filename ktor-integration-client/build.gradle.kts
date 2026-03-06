@@ -45,6 +45,7 @@ kotlin {
             dependencies {
                 implementation(libs.ktor.client.cio)
                 implementation(libs.ktor.client.websockets)
+                implementation(libs.slf4j.api)
             }
         }
         

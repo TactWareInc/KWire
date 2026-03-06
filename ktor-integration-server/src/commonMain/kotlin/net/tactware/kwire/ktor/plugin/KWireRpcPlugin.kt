@@ -220,7 +220,7 @@ class KWireRpc(configuration: Configuration) {
             when (frame) {
                 is Frame.Text -> {
                     val messageText = frame.readText()
-                    logger.debug("Received message at ${serviceConfig.path}: ${messageText.take(100)}...")
+                    logger.trace("Received message at ${serviceConfig.path}: ${messageText.take(100)}...")
                     
                     // Send error response for now
                     val errorResponse = """

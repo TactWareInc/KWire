@@ -74,7 +74,7 @@ class WebSocketSessionTransport(
     private var streamHandler: (suspend (StreamStart) -> Unit)? = null
     
     init {
-        logger.debug("WebSocketSessionTransport created for session")
+        logger.trace("WebSocketSessionTransport created for session")
     }
     
     /**
@@ -86,7 +86,7 @@ class WebSocketSessionTransport(
             when (frame) {
                 is Frame.Text -> {
                     val messageText = frame.readText()
-                    logger.debug("Received message: ${messageText.take(100)}...")
+                    logger.trace("Received message: ${messageText.take(100)}...")
                     
                     try {
                         val message = parseMessage(messageText)
@@ -97,15 +97,15 @@ class WebSocketSessionTransport(
                         // Also handle directly if handlers are set
                         when (message) {
                             is RpcRequest -> {
-                                logger.debug("Handling RPC request: ${message.serviceName}.${message.methodId}")
+                                logger.trace("Handling RPC request: ${message.serviceName}.${message.methodId}")
                                 requestHandler?.invoke(message)
                             }
                             is StreamStart -> {
-                                logger.debug("Handling stream start: ${message.serviceName}.${message.methodId}")
+                                logger.trace("Handling stream start: ${message.serviceName}.${message.methodId}")
                                 streamHandler?.invoke(message)
                             }
                             else -> {
-                                logger.debug("Received message: ${message::class.simpleName}")
+                                logger.trace("Received message: ${message::class.simpleName}")
                             }
                         }
                     } catch (e: Exception) {
@@ -118,7 +118,7 @@ class WebSocketSessionTransport(
                     break
                 }
                 else -> {
-                    logger.debug("Received non-text frame: ${frame.frameType}")
+                    logger.trace("Received non-text frame: ${frame.frameType}")
                 }
             }
         }
@@ -140,7 +140,7 @@ class WebSocketSessionTransport(
      * Connect is a no-op since we're using an existing session
      */
     override suspend fun connect(): RpcConnectResult {
-        logger.debug("Connect called - using existing WebSocket session")
+        logger.trace("Connect called - using existing WebSocket session")
         return if (isConnected) {
             RpcConnectResult.AlreadyConnected
         } else {
@@ -152,7 +152,7 @@ class WebSocketSessionTransport(
      * Disconnect closes the WebSocket session
      */
     override suspend fun disconnect() {
-        logger.debug("Disconnecting WebSocket session")
+        logger.trace("Disconnecting WebSocket session")
         try {
             session.close(CloseReason(CloseReason.Codes.GOING_AWAY, "Transport disconnecting"))
         } catch (e: Exception) {
@@ -174,7 +174,7 @@ class WebSocketSessionTransport(
         try {
             val messageJson = json.encodeToString(RpcMessage.serializer(), message)
             session.send(Frame.Text(messageJson))
-            logger.debug("Sent message: ${message::class.simpleName} (${message.messageId})")
+            logger.trace("Sent message: ${message::class.simpleName} (${message.messageId})")
         } catch (e: Exception) {
             logger.error("Failed to send message: ${e.message}")
             throw e
@@ -253,7 +253,7 @@ class WebSocketSessionTransport(
         scope.cancel()
         incomingMessages.close()
         outgoingMessages.close()
-        logger.debug("Transport cleaned up")
+        logger.trace("Transport cleaned up")
     }
 }
 

@@ -23,7 +23,7 @@ class UserServiceImpl : UserService {
     val userStats: Flow<UserStats> get() = _userStats.asStateFlow()
 
     init {
-        CoroutineScope(Dispatchers.Default).launch {
+        CoroutineScope(Dispatchers.IO).launch {
             while (true) {
                 // Simulate user activity
                 kotlinx.coroutines.delay(Random.nextLong(1000, 50000))

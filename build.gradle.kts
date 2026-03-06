@@ -16,7 +16,7 @@ val localProperties: Properties by lazy {
 }
 
 group = "net.tactware.kwire"
-version = "1.0.9"
+version = "1.0.11-alpha1"
 
 allprojects {
 

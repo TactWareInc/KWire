@@ -8,6 +8,8 @@ import kotlinx.coroutines.runBlocking
 import net.tactware.kwire.ktor.ktorWebSocketClientTransport
 import net.tactware.kwire.sample.api.CreateUserRequest
 import org.slf4j.LoggerFactory
+import kotlin.system.measureTimeMillis
+import kotlin.time.Duration.Companion.milliseconds
 
 fun main() = runBlocking {
 
@@ -39,10 +41,13 @@ fun main() = runBlocking {
         _, exception ->
         logger.error("Unhandled exception in client scope", exception)
     }).launch {
-        for (i in 1..5) {
-            val users = client.getAllUsers()
-            logger.info("All users (attempt $i): $users")
-            kotlinx.coroutines.delay(1_000)
+        for (i in 1..5000000000) {
+            val time = measureTimeMillis {
+                val users = client.getAllUsers()
+                logger.info("All users (attempt $i): $users")
+            }
+            logger.info("getAllUsers took ${time}ms")
+            kotlinx.coroutines.delay(50.milliseconds)
         }
     }
 
